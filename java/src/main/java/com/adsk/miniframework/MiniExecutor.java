@@ -18,6 +18,8 @@
 
 package com.adsk.miniframework;
 
+import java.util.HashMap;
+
 import org.apache.mesos.*;
 import org.apache.mesos.Protos.*;
 
@@ -29,10 +31,18 @@ import org.json.simple.parser.*;
 
 public class MiniExecutor implements Executor
 {
-	private ActorRef actor;
+
+	private JSONParser parser;
+	private HashMap<String, ActorRef> actors;
 	private final ActorSystem system = ActorSystem.create("ExecutorSystem");
 	private TaskInfo task;
-
+	
+	public MiniExecutor()
+	{
+		this.parser = new JSONParser();
+		this.actors = new HashMap<String, ActorRef>();
+	}
+	
 	@Override
 	public void registered(ExecutorDriver driver, ExecutorInfo executorInfo, FrameworkInfo frameworkInfo,
 			SlaveInfo slaveInfo)
@@ -53,36 +63,8 @@ public class MiniExecutor implements Executor
 	@Override
 	public void launchTask(final ExecutorDriver driver, final TaskInfo task)
 	{
-//		this.actor = this.system.actorOf(Props.create(MiniAkka.Sleepy.class, driver, task), "sleepy-" + task.getTaskId().getValue());	
-		this.task = task;
-		new Thread()
-		{
-			public void run()
-			{
-				try
-				{
-					TaskStatus status = TaskStatus.newBuilder().setTaskId(task.getTaskId())
-							.setState(TaskState.TASK_RUNNING).build();
-
-					driver.sendStatusUpdate(status);
-
-					System.out.println("Running task " + task.getTaskId().getValue());
-
-					//
-					// - Just spin.
-					//
-
-					while(true)
-					{
-						Thread.sleep(2000); 
-					}
-				}
-				catch (Exception e)
-				{
-					e.printStackTrace();
-				}
-			}
-		}.start();
+		this.actors.put(task.getTaskId().getValue(),
+				this.system.actorOf(Props.create(MiniAkka.Sleepy.class, driver, task), "sleepy-" + task.getTaskId().getValue()));	
 	}
 
 	@Override
@@ -93,33 +75,17 @@ public class MiniExecutor implements Executor
 	@Override
 	public void frameworkMessage(ExecutorDriver driver, byte[] data)
 	{
-//		this.actor.tell(new String(data), ActorRef.noSender());
-		String msg = new String(data);
+		String message = new String(data);
 		JSONObject msgJson = new JSONObject();
 
 		try
 		{
-			JSONParser parser = new JSONParser();
-			msgJson = (JSONObject) parser.parse((String) msg);
+			msgJson = (JSONObject) this.parser.parse((String) message);
+			this.actors.get(msgJson.get("task")).tell(msgJson, ActorRef.noSender());
 		}
 		catch (ParseException e)
 		{
-			// Leave handling for later
-		}
-
-		//
-		// - Task told to stop
-		//
-		if (msgJson.containsKey("stop"))
-		{
-			//
-			// - update status and let the framework know
-			// - Then queue poisonpill
-			//
-			TaskStatus status = TaskStatus.newBuilder().setTaskId(task.getTaskId()).setState(TaskState.TASK_FINISHED)
-					.build();
-
-			driver.sendStatusUpdate(status);
+			//this.actors.get(msgJson.get("task")).tell(message, ActorRef.noSender());
 		}
 	}
 

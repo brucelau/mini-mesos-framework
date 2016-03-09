@@ -348,9 +348,9 @@ public class MiniScheduler implements Scheduler
     		//
     		for (String task : this.registered.get(appName).getTasksRunning())
     		{
-    			System.out.println("terminating task: " + task);
 	    		JSONObject msg = new JSONObject();
 	    		msg.put("stop", "true");
+	    		msg.put("task", task);
 	    		byte[] bytes = new byte[0];
 	    		
 	    		try
@@ -365,6 +365,8 @@ public class MiniScheduler implements Scheduler
 	    		
 	    		ExecutorID executor = this.tasks.get(task).getExecutor().getExecutorId();
 	    		SlaveID slave = this.tasks.get(task).getSlaveId();
+	    		
+//	    		System.out.println("Stopping  task: " + task + " executor: " + executor + " on slave: " + slave);
 	    		
 	    		driver.sendFrameworkMessage(executor, slave, bytes);
     		}

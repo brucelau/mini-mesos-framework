@@ -46,25 +46,9 @@ public class MiniAkka
 		@Override
 		public void onReceive(Object message)
 		{
-			if (!(message instanceof String || message instanceof JSONObject))
-			{
-				//
-				// - Accept only String or JSON messages
-				//
-				return;
-			}
-
-			JSONObject msgJson = new JSONObject();
-
-			try
-			{
-				msgJson = (JSONObject) this.parser.parse((String) message);
-			}
-			catch (ParseException e)
-			{
-				// Leave handling for later
-			}
-
+		
+			JSONObject msgJson = (JSONObject) message;
+			
 			//
 			// - Task told to stop
 			//
@@ -74,7 +58,7 @@ public class MiniAkka
 				// - update status and let the framework know
 				// - Then queue poisonpill
 				//
-				getContext().stop(this.getSelf());
+				this.getSelf().tell(PoisonPill.getInstance(), this.getSelf());
 			}
 
 			//
