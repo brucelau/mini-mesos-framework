@@ -54,7 +54,7 @@ public class AppSpecTest
 		this.json = new JSONObject();
 
 		//
-		// - This is hear because ExecutorInfo cannot be mocked... wish it could
+		// - This is here because ExecutorInfo cannot be mocked... wish it could
 		//
 		this.cmd = "echo";
 		String path = System.getProperty("user.dir");
@@ -72,6 +72,9 @@ public class AppSpecTest
 	@After
 	public void teardown()
 	{
+		//		
+		// - Reset our test objects
+		//
 		this.name = null;
 		this.cpu = 0.0;
 		this.mem = 0.0;
@@ -85,6 +88,9 @@ public class AppSpecTest
 	@Test
 	public void testSpecConstruction() throws Exception
 	{
+		//
+		// - Tests that a spec is initialised properly
+		//
 		assertEquals(this.spec.jsonGetString("name"), this.name);
 		assertEquals(this.spec.jsonGetDouble("required_cpus"), this.cpu, this.doubleDelta);
 		assertEquals(this.spec.jsonGetDouble("required_mem"), this.mem, this.doubleDelta);
@@ -95,6 +101,9 @@ public class AppSpecTest
 	@Test
 	public void testTaskLaunch() throws Exception
 	{
+		//
+		// - Tests that tasks are launched correctly
+		//
 		String task = "test_task_launch";
 		this.spec.taskLaunched(task);
 
@@ -105,6 +114,9 @@ public class AppSpecTest
 	@Test
 	public void testTaskRunning() throws Exception
 	{
+		//
+		// - Tests that logic with launched and running tasks is correct
+		//
 		String task = "test_task_running";
 		this.spec.taskLaunched(task);
 		this.spec.taskRunning(task);
@@ -116,6 +128,9 @@ public class AppSpecTest
 	@Test
 	public void testTaskStopped() throws Exception
 	{
+		//
+		// - Tests that logic with stopped tasks is corect
+		//
 		String task = "test_task_stopped";
 		this.spec.taskLaunched(task);
 		this.spec.taskRunning(task);
@@ -131,6 +146,9 @@ public class AppSpecTest
 	@Test
 	public void testAppTerminated() throws Exception
 	{
+		//
+		// - Makes sure that apps can be terminated properly
+		//
 		String task = "test_task_stopped";
 		this.spec.taskLaunched(task);
 		this.spec.taskRunning(task);

@@ -13,7 +13,9 @@ import org.json.simple.parser.*;
 
 public class MiniExecutor implements Executor
 {
-
+	//
+	// - If app has an executor, want tasks to be launched with accompanying actor
+	//
 	private JSONParser parser;
 	private HashMap<String, ActorRef> actors;
 	private final ActorSystem system = ActorSystem.create("ExecutorSystem");
@@ -67,7 +69,7 @@ public class MiniExecutor implements Executor
 		}
 		catch (ParseException e)
 		{
-			//this.actors.get(msgJson.get("task")).tell(message, ActorRef.noSender());
+			// Only interested in JSON serialisable messages for now
 		}
 	}
 
