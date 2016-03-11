@@ -5,7 +5,7 @@ This framework is intended to run applications with groups of tasks to perform i
 ### Getting started
 
 #### Step 1
-Install [**Mesos**](http://mesos.apache.org/gettingstarted/) using their guide. I suggest going the Git route. Following the steps until just after ```make install```; note that this could take a couple of minutes.
+Install local [**Mesos**](http://mesos.apache.org/gettingstarted/) using their guide. I suggest going the Git route. Following the steps until just after ```make install```. Note that this could take a couple of minutes -- might want to get a coffee.
 
 #### Step 2
 
@@ -13,7 +13,7 @@ To run the master/slave vanilla, follow the remaining steps at the bottom:
 
 ```
 $ ./bin/mesos-master.sh --ip=127.0.0.1 --work_dir=/var/lib/mesos
-$ ./bin/mesos-master.sh --ip=127.0.0.1 --work_dir=/var/lib/mesos
+$ ./bin/mesos-slave.sh --master=127.0.0.1:5050
 ```
 
 To run the master/slave with authentication, setup credentials according to the bottom of the page [**here**](http://mesos.apache.org/documentation/latest/authentication/) instead. 
@@ -37,14 +37,21 @@ FMWK_EXECUTOR_PATH=<path_to_dir_with_executor_script> # i.e. <abs path to>/src/m
 LOG_DIR=<path_to_dir_for_logging>
 ```
 
+#### Step 4
 On your local machine, run:
 ```
-$ ./framework <mesos_master_ip>:5050
+$ ./framework <mesos_master_ip>:5050 # should be localhost if following Steps 1-2
 ```
 Or, if authentication is configured from step 2:
 ```
 $ AUTHENTICATE=true PRINCIPAL=<principal2 from Step 2> SECRET=<secret2 from Step 2> ./framework <mesos_master_ip>:5050
 ```
+
+### Troubleshooting:
+
++ Mesos Master/Slave not running: I defer to the Mesos documentation for this one. Make sure your firewall allows the machines to interact with each other.
++ Framework hangs on authentication: Same as above; make sure that your firewall allows connections to/from your Mesos master/slave.
++ Cannot find native Mesos library: Did you specify the right mesos build directory?
 
 
 ### TODO:
