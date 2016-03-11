@@ -105,7 +105,7 @@ public class AppSpec {
         this.jsonUpdate();
     }
     
-    public void tasksRunning(String task)
+    public void taskRunning(String task)
     {
     	this.tasksRunning.add(task);
     	this.jsonUpdate();

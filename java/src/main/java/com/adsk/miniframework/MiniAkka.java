@@ -38,6 +38,9 @@ public class MiniAkka
 		@Override
 		public void postStop()
 		{
+			//
+			// - If the actor successfully exits, assume the task is finished properly
+			//
 			this.status = TaskStatus.newBuilder().setTaskId(this.task.getTaskId()).setState(TaskState.TASK_FINISHED).build();
 			System.out.println("Stopping task " + task.getTaskId().getValue());
 			this.driver.sendStatusUpdate(this.status);
@@ -55,8 +58,7 @@ public class MiniAkka
 			if (msgJson.containsKey("stop"))
 			{
 				//
-				// - update status and let the framework know
-				// - Then queue poisonpill
+				// - queue poisonpill; this will trigger the task_finished status update
 				//
 				this.getSelf().tell(PoisonPill.getInstance(), this.getSelf());
 			}

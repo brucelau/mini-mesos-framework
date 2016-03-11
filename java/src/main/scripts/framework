@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+: ${FMWK_JAR_DIR:=<abs path to>/target/MiniFramework-0.0.1-SNAPSHOT-jar-with-dependencies.jar}
+: ${MESOS_BUILD_DIR:=<path_to_Mesos_build_directory>}
+: ${FMWK_EXECUTOR_PATH:=<abs path to>/src/main/scripts/}
+
+exec java -cp ${FMWK_JAR_DIR}/MiniFramework-0.0.1-SNAPSHOT-jar-with-dependencies.jar \
+ -Djava.library.path=${MESOS_BUILD_DIR}/src/.libs \
+  com.adsk.miniframework.MiniFramework  "${@}"
+ 

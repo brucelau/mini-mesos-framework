@@ -30,7 +30,7 @@ public class MiniFramework
     private static void usage()
     {
         String name = MiniFramework.class.getName();
-        System.err.println("Usage: " + name + " master <tasks>");
+        System.err.println("Usage: " + name + " master ip");
     }
 
     public static void main(String[] args) throws Exception
@@ -62,7 +62,15 @@ public class MiniFramework
             // 
             // - Have all teams using the same executor for now
             // 
-            String path = new File(command).getCanonicalPath();
+            String path;
+            if (System.getenv("FMWK_EXECUTOR_PATH") != null)
+        	{
+            	path = new File(new File(System.getenv("FMWK_EXECUTOR_PATH")), command).getCanonicalPath();
+        	}
+            else
+            {
+            	path = new File(command).getCanonicalPath();
+            }
             CommandInfo.URI uri = CommandInfo.URI.newBuilder().setValue(path).build();
             CommandInfo cmdInfo = CommandInfo.newBuilder().setValue(command).addUris(uri).build();
             
@@ -107,7 +115,7 @@ public class MiniFramework
 
         if (System.getenv("AUTHENTICATE") == null)
         {
-            frameworkBuilder.setPrincipal("test-framework-java");
+            frameworkBuilder.setPrincipal("");
 
             driver = new MesosSchedulerDriver(scheduler, 
             		frameworkBuilder.build(), 

@@ -258,7 +258,7 @@ public class MiniScheduler implements Scheduler
         
         if (status.getState() == TaskState.TASK_RUNNING)
         {
-        	this.registered.get(name).tasksRunning(taskID);
+        	this.registered.get(name).taskRunning(taskID);
         }
         // 
         // - Finished task; retrieve the name and update the app registration
@@ -344,7 +344,7 @@ public class MiniScheduler implements Scheduler
     	if (this.registered.get(appName).jsonGetInt("running_tasks") >= 3)
 		{
     		//
-    		// - This well cascade the actors to suicide
+    		// - This well make the actors cascade-suicide
     		//
     		for (String task : this.registered.get(appName).getTasksRunning())
     		{
@@ -365,9 +365,7 @@ public class MiniScheduler implements Scheduler
 	    		
 	    		ExecutorID executor = this.tasks.get(task).getExecutor().getExecutorId();
 	    		SlaveID slave = this.tasks.get(task).getSlaveId();
-	    		
-//	    		System.out.println("Stopping  task: " + task + " executor: " + executor + " on slave: " + slave);
-	    		
+	    			    		
 	    		driver.sendFrameworkMessage(executor, slave, bytes);
     		}
     		
@@ -386,20 +384,20 @@ public class MiniScheduler implements Scheduler
         //
         // - Check if all the apps are finished (yes it's not the fastest check... but will do for now)
         //
-        boolean allTerminated = true;
-        boolean noTasksLeft = true;
+        boolean allAppsTerminated = true;
+        boolean allTasksStopped = true;
         
         for (AppSpec spec : this.registered.values())
         {
         	if(!spec.jsonGetBoolean("app_terminated"))
     		{
-    			allTerminated = false;
+        		allAppsTerminated = false;
     			break;
     		}
         	
         	if(spec.jsonGetInt("running_tasks") != 0)
         	{
-        		noTasksLeft = false;
+        		allTasksStopped = false;
         		break;
         	}
         }
@@ -408,7 +406,7 @@ public class MiniScheduler implements Scheduler
         // - All done; we're finished
         // - Important: wait for all tasks to register as finished first.
         //
-        if (allTerminated && noTasksLeft)
+        if (allAppsTerminated && allTasksStopped)
         {
         	System.out.println("All tasks complete. Driver terminating.");
             driver.stop();
