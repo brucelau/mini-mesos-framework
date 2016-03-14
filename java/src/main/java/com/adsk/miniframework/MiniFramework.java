@@ -81,7 +81,7 @@ public class MiniFramework
                                     .setSource("java")
                                     .build();
 
-            AppSpec spec = new AppSpec(names[i], executor, reqCpu[i], reqMem[i]);
+            AppSpec spec = new AppSpec(names[i], reqCpu[i], reqMem[i], executor);
 
             registered.put(names[i], spec);
         }

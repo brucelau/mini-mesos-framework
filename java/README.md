@@ -4,10 +4,31 @@ This framework is intended to run applications with groups of tasks to perform i
 
 ### Getting started
 
-#### Step 1
-Install local [**Mesos**](http://mesos.apache.org/gettingstarted/) using their guide. I suggest going the Git route. Following the steps until just after ```make install```. Note that this could take a couple of minutes -- might want to get a coffee.
+#### Step 0
 
-#### Step 2
+Clone and build the Maven project:
+```
+$ cd <your_working_directory>
+$ git clone git@github.com:lmok/mini-mesos-framework.git
+$ cd java
+$ mvn clean package
+```
+
+You now have two options... use [**Mesos's local setup**](http://mesos.apache.org/gettingstarted/) or use [**dry-dock**](https://github.com/UncleBarney/dry-dock).
+
+#### (Local Mesos) Step 1
+
+Fill out the template scripts in src/main/scripts with appropriate values, or export:
+```
+$FMWK_JAR_DIR=<path_to_Maven_packaged_jar> # i.e. <abs_path_to>/target/MiniFramework-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+$MESOS_LIB_PATH=<path_to_native_mesos_library> # <mesos_build_path>/src/.lib since you are following Mesos' local setup guide
+$FMWK_EXECUTOR_PATH=<path_to_dir_with_executor_script> # i.e. <abs_path_to>/src/main/scripts/
+$LOG_DIR=<path_to_dir_for_logging>
+```
+
+#### (Local Mesos) Step 2
+
+Install local [**Mesos**](http://mesos.apache.org/gettingstarted/) using their guide. I suggest going the Git route. Following the steps until just after ```make install```. Note that this could take a couple of minutes -- might want to get a coffee.
 
 To run the master/slave vanilla, follow the remaining steps at the bottom:
 
@@ -18,34 +39,34 @@ $ ./bin/mesos-slave.sh --master=127.0.0.1:5050
 
 To run the master/slave with authentication, setup credentials according to the bottom of the page [**here**](http://mesos.apache.org/documentation/latest/authentication/) instead. 
 
-*(WIP -- not working yet)*: Alternatively, use [**dry-dock**](https://github.com/UncleBarney/dry-dock) to spin up a Dockerised Mesos/Marathon cluser locally; be sure to have installed Docker before this. 
-
-#### Step 3
-Build the Maven project:
-```
-$ cd (your-working-directory)
-$ git clone git@github.com:lmok/mini-mesos-framework.git
-$ cd java
-$ mvn clean package
-```
-
-Fill out the template scripts in src/main/scripts with appropriate values, or export:
-```
-FMWK_JAR_DIR=<path_to_Maven_packaged_jar> # i.e. <abs path to>/target/MiniFramework-0.0.1-SNAPSHOT-jar-with-dependencies.jar
-MESOS_BUILD_DIR=<path_to_Mesos_build_directory>
-FMWK_EXECUTOR_PATH=<path_to_dir_with_executor_script> # i.e. <abs path to>/src/main/scripts/
-LOG_DIR=<path_to_dir_for_logging>
-```
-
-#### Step 4
+#### (Local Mesos) Step 3
 On your local machine, run:
 ```
 $ ./framework <mesos_master_ip>:5050 # should be localhost if following Steps 1-2
 ```
 Or, if authentication is configured from step 2:
 ```
-$ AUTHENTICATE=true PRINCIPAL=<principal2 from Step 2> SECRET=<secret2 from Step 2> ./framework <mesos_master_ip>:5050
+$ AUTHENTICATE=true PRINCIPAL=<principal2_from_Step_2> SECRET=<secret2_from_Step_2> ./framework <mesos_master_ip>:5050
 ```
+
+#### (WIP dry-dock) Step 1
+
+??? Don't do this yet, not working.
+
+#### (WIP dry-dock) Step 2
+
+Alternatively, you can use [**dry-dock**](https://github.com/UncleBarney/dry-dock) to spin up a Dockerised Mesos/Marathon cluser locally; be sure to have installed [**Docker**](https://www.docker.com/) before this. 
+
+Find the IP for your Docker (see docs for dry-dock). Export this (e.g. I use docker-machine):
+```
+$ export MESOS_LOCALSETUP_HOST_IP=`docker-machine ip`
+```
+
+#### (WIP dry-dock) Step 3
+
+
+
+
 
 ### Troubleshooting:
 
@@ -55,7 +76,10 @@ $ AUTHENTICATE=true PRINCIPAL=<principal2 from Step 2> SECRET=<secret2 from Step
 
 
 ### TODO:
-1. Configure with dry-dock to run on localmachine
-2. Parse scripts with configurations / make installable package for Mesos Fetcher
-3. Enable Docker containeriser
-4. Pass customisable # of tasks and application specs
+1. Configure with dry-dock to run locally
+2. Enable Docker containeriser
+3a. Build gateway docker container for task deployment
+3b. Rework logic for executors + tasks to parallelise properly
+4. Parse scripts with configurations / make installable package for Mesos Fetcher
+5. Install Java ILP to optimise resource allocation
+6. Pass customisable # of tasks and application specs

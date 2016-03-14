@@ -50,7 +50,7 @@ public class AppSpecTest
 		this.name = "test";
 		this.cpu = 1.0;
 		this.mem = 16;
-		this.spec = new AppSpec(this.name, this.executor, this.cpu, this.mem);
+		this.spec = new AppSpec(this.name, this.cpu, this.mem, this.executor);
 		this.json = new JSONObject();
 
 		//
@@ -105,9 +105,9 @@ public class AppSpecTest
 		// - Tests that tasks are launched correctly
 		//
 		String task = "test_task_launch";
-		this.spec.taskLaunched(task);
+		this.spec.putLaunchedTask(task);
 
-		assertEquals(Arrays.asList(task), this.spec.getTasksLaunched());
+		assertEquals(Arrays.asList(task), this.spec.getLaunchedTasks());
 		assertEquals(1, this.spec.jsonGetInt("launched_tasks"));
 	}
 	
@@ -118,10 +118,10 @@ public class AppSpecTest
 		// - Tests that logic with launched and running tasks is correct
 		//
 		String task = "test_task_running";
-		this.spec.taskLaunched(task);
-		this.spec.taskRunning(task);
+		this.spec.putLaunchedTask(task);
+		this.spec.putRunningTask(task);
 		
-		assertEquals(Arrays.asList(task), this.spec.getTasksRunning());
+		assertEquals(Arrays.asList(task), this.spec.getRunningTasks());
 		assertEquals(1, this.spec.jsonGetInt("running_tasks"));
 	}
 	
@@ -132,12 +132,12 @@ public class AppSpecTest
 		// - Tests that logic with stopped tasks is corect
 		//
 		String task = "test_task_stopped";
-		this.spec.taskLaunched(task);
-		this.spec.taskRunning(task);
-		this.spec.taskStopped(task);
+		this.spec.putLaunchedTask(task);
+		this.spec.putRunningTask(task);
+		this.spec.putStoppedTask(task);
 		
-		assertEquals(Arrays.asList(task), this.spec.getTasksLaunched());
-		assertEquals(Arrays.asList(), this.spec.getTasksRunning());
+		assertEquals(Arrays.asList(task), this.spec.getLaunchedTasks());
+		assertEquals(Arrays.asList(), this.spec.getRunningTasks());
 		assertEquals(1, this.spec.jsonGetInt("launched_tasks"));
 		assertEquals(0, this.spec.jsonGetInt("running_tasks"));
 		assertEquals(1, this.spec.jsonGetInt("stopped_tasks"));
@@ -150,10 +150,10 @@ public class AppSpecTest
 		// - Makes sure that apps can be terminated properly
 		//
 		String task = "test_task_stopped";
-		this.spec.taskLaunched(task);
-		this.spec.taskRunning(task);
-		this.spec.taskStopped(task);
-		this.spec.appTerminated();
+		this.spec.putLaunchedTask(task);
+		this.spec.putRunningTask(task);
+		this.spec.putStoppedTask(task);
+		this.spec.setAppTerminated();
 		
 		assertTrue(this.spec.jsonGetBoolean("app_terminated"));
 	}

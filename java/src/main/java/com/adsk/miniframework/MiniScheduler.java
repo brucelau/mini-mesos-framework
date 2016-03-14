@@ -201,7 +201,7 @@ public class MiniScheduler implements Scheduler
                 // 
                 // - Increment the runs on the spec
                 // 
-                this.registered.get(spec.name).taskLaunched(taskID.getValue());
+                this.registered.get(spec.name).putLaunchedTask(taskID.getValue());
 
                 remainingCpu -= spec.jsonGetDouble("required_cpus");
                 remainingMem -= spec.jsonGetDouble("required_mem");
@@ -258,7 +258,7 @@ public class MiniScheduler implements Scheduler
         
         if (status.getState() == TaskState.TASK_RUNNING)
         {
-        	this.registered.get(name).taskRunning(taskID);
+        	this.registered.get(name).putRunningTask(taskID);
         }
         // 
         // - Finished task; retrieve the name and update the app registration
@@ -271,7 +271,7 @@ public class MiniScheduler implements Scheduler
             // - If the task is the app's final task (find it in the Json message),
             // - update the app to be terminated. See AppSpec.taskStopped().
             //
-            this.registered.get(name).taskStopped(taskID);         
+            this.registered.get(name).putStoppedTask(taskID);         
         }
         
         //
@@ -344,9 +344,9 @@ public class MiniScheduler implements Scheduler
     	if (this.registered.get(appName).jsonGetInt("running_tasks") >= 3)
 		{
     		//
-    		// - This well make the actors cascade-suicide
+    		// - This will make the actors cascade-suicide
     		//
-    		for (String task : this.registered.get(appName).getTasksRunning())
+    		for (String task : this.registered.get(appName).getRunningTasks())
     		{
 	    		JSONObject msg = new JSONObject();
 	    		msg.put("stop", "true");
@@ -372,7 +372,7 @@ public class MiniScheduler implements Scheduler
     		//
     		// = Update our application spec with termination flag
     		//
-    		this.registered.get(appName).appTerminated();
+    		this.registered.get(appName).setAppTerminated();
 		}
     }
     
