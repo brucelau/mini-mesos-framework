@@ -50,25 +50,37 @@ public class MiniAkka
 		public void onReceive(Object message)
 		{
 		
-			JSONObject msgJson = (JSONObject) message;
-			
-			//
-			// - Task told to stop
-			//
-			if (msgJson.containsKey("stop"))
+			if (message instanceof JSONObject)
 			{
+				JSONObject msgJson = (JSONObject) message;
+				
 				//
-				// - queue poisonpill; this will trigger the task_finished status update
+				// - Task told to stop
+				//
+				if (msgJson.containsKey("stop"))
+				{
+					//
+					// - queue poisonpill; this will trigger the task_finished status update
+					//
+					this.getSelf().tell(PoisonPill.getInstance(), this.getSelf());
+				}
+
+				//
+				// - Catch other messages
+				//
+				else
+				{
+					unhandled(message);
+				}
+			}
+			
+			else if (message instanceof ExecutorSpec.Terminate)
+			{
+				
+				//
+				// - TODO gracefully shutdown
 				//
 				this.getSelf().tell(PoisonPill.getInstance(), this.getSelf());
-			}
-
-			//
-			// - Catch other messages
-			//
-			else
-			{
-				unhandled(message);
 			}
 		}
 	}

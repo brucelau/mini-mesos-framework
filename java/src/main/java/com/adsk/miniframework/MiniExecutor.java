@@ -48,7 +48,7 @@ public class MiniExecutor implements Executor
 	public void launchTask(final ExecutorDriver driver, final TaskInfo task)
 	{
 		this.actors.put(task.getTaskId().getValue(),
-				this.system.actorOf(Props.create(MiniAkka.Sleepy.class, driver, task), "sleepy-" + task.getTaskId().getValue()));	
+				this.system.actorOf(Props.create(MiniAkka.Sleepy.class, driver, task), task.getTaskId().getValue() + "-actor"));	
 	}
 
 	@Override

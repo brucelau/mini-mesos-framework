@@ -26,7 +26,7 @@ public class MiniScheduler implements Scheduler
 	
     // 
 	// - Members for applications
-    // - Dict containing registered applications
+    // - Dict containing registered applications (name: appspec)
     // 
     private HashMap<String, AppSpec> registered;
     private double cpuLimit;
@@ -34,15 +34,26 @@ public class MiniScheduler implements Scheduler
     private int instanceLimit;
     
     //
-    // - Dict containing launched tasks
+    // - Dict from taskids to app names
     //
-    private HashMap<String, TaskInfo> tasks;
+    private HashMap<String, String> tasks;
     
     // 
     // - book keeping constants used by e.g. framework
     // 
-    private final boolean implicitAcknowledgements;
+    private boolean implicitAcknowledgements;
    
+    //
+    // - a toy scheduler with some limits and a couple of specs
+    //
+    public MiniScheduler(boolean implicitAcknowledgements)
+    {
+    	this(implicitAcknowledgements, new HashMap<String, AppSpec>(), 5, 3, 256);
+    }
+    
+    //
+    // - External construction of apps
+    //
     public MiniScheduler(boolean implicitAcknowledgements, HashMap<String, AppSpec> teams)
     {
     	//
@@ -50,7 +61,10 @@ public class MiniScheduler implements Scheduler
     	//
         this(implicitAcknowledgements, teams, 5, 3, 256);
     }
-
+    
+    //
+    // - Proper constructor; specify everything
+    //
     public MiniScheduler(boolean implicitAcknowledgements, HashMap<String, AppSpec> teams, int instanceLimit, double cpuLimit, double memLimit)
     {
         
@@ -64,9 +78,10 @@ public class MiniScheduler implements Scheduler
         this.cpuLimit = cpuLimit;
         this.memLimit = memLimit;
         this.registered = new HashMap<String, AppSpec>(teams);
-        this.tasks = new HashMap<String, TaskInfo>();
+        this.tasks = new HashMap<String, String>();
+        
     }
-
+    
     public AppSpec getSpecs(String name)
     {
     	//
@@ -78,11 +93,11 @@ public class MiniScheduler implements Scheduler
     public void putSpecs(String name, AppSpec spec)
     {
     	//
-    	// - Update specs for registered app (deprecated?)
+    	// - Update specs for registered app
     	//
         registered.put(name, spec);
     }
-
+    
     @Override
     public void registered(SchedulerDriver driver, FrameworkID frameworkId, MasterInfo masterInfo)
     {
@@ -102,133 +117,13 @@ public class MiniScheduler implements Scheduler
     public void resourceOffers(SchedulerDriver driver, List<Offer> offers)
     {
 
-        // 
-        // - Shuffle the list of specs, for fairness (will be greedy after shuffle)
-        // 
-        List<AppSpec> shuffled = new ArrayList<AppSpec>(this.registered.values());
-        Collections.shuffle(shuffled);
-
-        //
-        // - Same offer iteration as python example
+    	//
         // - Wish there were more documentation on the Offer class...
+        // - TODO use allocator here
         //
         for (Offer offer : offers)
         {
-            // 
-            // - Build an offer launcher; functions just as queue of tasks
-            // 
-            Offer.Operation.Launch.Builder launcher = Offer.Operation.Launch.newBuilder();
-            double offerCpu = 0;
-            double offerMem = 0;
-            
-            //
-            // - Resources for a particular offer; count resources in offer
-            // - would want to count the instances (though one offer is from one slave)
-            // 
-            for (Resource resource : offer.getResourcesList())
-            {
-                if (resource.getName().equals("cpus"))
-                {
-                    offerCpu += resource.getScalar().getValue();
-                }
-                else if (resource.getName().equals("mem"))
-                {
-                    offerMem += resource.getScalar().getValue();
-                }
-            }
-
-            System.out.println("Received offer " + offer.getId().getValue() + " with cpus: " + offerCpu + " and mem: " + offerMem);
-
-            double remainingCpu = offerCpu;
-            double remainingMem = offerMem;
-
-            // 
-            // - Main loop queueing tasks
-            // 
-            for (AppSpec spec : shuffled)
-            {   
-
-                // 
-                // - if team is over quota, 
-                // - or offer isn't enough for task, 
-            	// - or the application's finished:
-                // - continue
-                // 
-                if (spec.jsonGetInt("allocated_instances") >= this.instanceLimit || 
-                		spec.jsonGetDouble("allocated_cpus") >= this.cpuLimit || 
-                		spec.jsonGetDouble("allocated_mem") >= this.memLimit ||
-                		spec.jsonGetDouble("required_cpus") > remainingCpu || 
-                		spec.jsonGetDouble("required_mem") > remainingMem ||
-                		spec.jsonGetBoolean("app_terminated"))
-                {
-                    continue;
-                }
-
-                // 
-                // - Set task ID as name + number launched 
-                // 
-                TaskID taskID = TaskID.newBuilder().setValue(spec.name + "-" + spec.jsonGetString("launched_tasks")).build();
-
-                System.out.println("Launching task " + taskID.getValue() + " using offer " + offer.getId().getValue());
-                               
-                // 
-                // - Queue the task onto the launcher
-                // 
-                TaskInfo task = TaskInfo.newBuilder()
-                                .setName("task " + taskID.getValue())
-                                .setTaskId(taskID)
-                                .setSlaveId(offer.getSlaveId())
-                                // Get the required cpus off of the specs
-                                .addResources(Resource.newBuilder()
-                                              .setName("cpus")
-                                              .setType(Value.Type.SCALAR)
-                                              .setScalar(Value.Scalar.newBuilder().setValue(spec.jsonGetDouble("required_cpus"))))
-                                // Do the same for required mem
-                                .addResources(Resource.newBuilder()
-                                              .setName("mem")
-                                              .setType(Value.Type.SCALAR)
-                                              .setScalar(Value.Scalar.newBuilder().setValue(spec.jsonGetDouble("required_mem"))))
-                                .setExecutor(ExecutorInfo.newBuilder(spec.executor))
-                                .build();
-
-                launcher.addTaskInfos(TaskInfo.newBuilder(task));
-                
-                //
-                // - Update list of tasks launched
-                //
-                this.tasks.put(task.getTaskId().getValue(), task);
-
-                // 
-                // - Increment the runs on the spec
-                // 
-                this.registered.get(spec.name).putLaunchedTask(taskID.getValue());
-
-                remainingCpu -= spec.jsonGetDouble("required_cpus");
-                remainingMem -= spec.jsonGetDouble("required_mem");
-            }
-
-            // 
-            // - This janky bit of code is just from the example framework;
-            // - will apparently be deprecated
-            // 
-            List<OfferID> offerIds = new ArrayList<OfferID>();
-            offerIds.add(offer.getId());
-
-            List<Offer.Operation> operations = new ArrayList<Offer.Operation>();
-
-            Offer.Operation operation = Offer.Operation.newBuilder()
-                                        .setType(Offer.Operation.Type.LAUNCH)
-                                        .setLaunch(launcher)
-                                        .build();
-
-            operations.add(operation);
-
-            Filters filters = Filters.newBuilder().setRefuseSeconds(1).build();
-
-            // 
-            // - Accept the offer with our queued task
-            // 
-            driver.acceptOffers(offerIds, operations, filters);
+        	MiniAllocator.naieveAllocate(driver, offer, this.registered, instanceLimit, cpuLimit, memLimit);
         }
     }
 
@@ -239,10 +134,9 @@ public class MiniScheduler implements Scheduler
         // 
         // - Get the application name by splitting the task # off
         // 
-        String taskID = status.getTaskId().getValue();
-        String[] splitted = taskID.split("-");
+        String[] splitted = status.getTaskId().getValue().split("-");
         String name = String.join("-", Arrays.copyOfRange(splitted, 0, splitted.length - 1));
-        
+        String executorName = status.getExecutorId().getValue();
         //
         // - Get the message from the status update
         //
@@ -258,7 +152,7 @@ public class MiniScheduler implements Scheduler
         
         if (status.getState() == TaskState.TASK_RUNNING)
         {
-        	this.registered.get(name).putRunningTask(taskID);
+        	this.registered.get(name).putRunningTask(executorName, status.getTaskId());
         }
         // 
         // - Finished task; retrieve the name and update the app registration
@@ -271,11 +165,11 @@ public class MiniScheduler implements Scheduler
             // - If the task is the app's final task (find it in the Json message),
             // - update the app to be terminated. See AppSpec.taskStopped().
             //
-            this.registered.get(name).putStoppedTask(taskID);         
+            this.registered.get(name).putStoppedTask(executorName, status.getTaskId());         
         }
         
         //
-        // - Todo, don't abort the driver. Kill the task + app and continue with the rest.
+        // - TODO, don't abort the driver. Initiate task reconciliation here
         //
         else if (status.getState() == TaskState.TASK_LOST || status.getState() == TaskState.TASK_KILLED || status.getState() == TaskState.TASK_FAILED)
         {
@@ -284,7 +178,7 @@ public class MiniScheduler implements Scheduler
                                " with reason '" + status.getReason().getValueDescriptor().getName() + "'" +
                                " from source '" + status.getSource().getValueDescriptor().getName() + "'" +
                                " with message '" + status.getMessage() + "'");
-
+            
             // 
             // - aborting driver shuts everything down;
             // - otherwise will have to update registered specs
@@ -303,8 +197,8 @@ public class MiniScheduler implements Scheduler
         // - See if we should kill all tasks in the app
         // - then see if we have killed all tasks in all apps
         //
-        this.appTerminate(driver, name);
-        this.frameworkTerminate(driver);
+        this.terminateApp(driver, name);
+        this.terminateFramework(driver);
         
         if (!implicitAcknowledgements)
         {
@@ -335,51 +229,26 @@ public class MiniScheduler implements Scheduler
     //
     // - On status update, this checks if the task's application
     // - is entirely finished. Our e.g. condition is to stop any application with 2 running tasks.
+    // - TODO replace with termination function in appspec
     //
-    public void appTerminate(SchedulerDriver driver, String appName)
+    public void terminateApp(SchedulerDriver driver, String appName)
     {
     	//
     	// - Only have to modify this boolean condition for whatever termination condition is needed
     	//
-    	if (this.registered.get(appName).jsonGetInt("running_tasks") >= 3)
-		{
-    		//
-    		// - This will make the actors cascade-suicide
-    		//
-    		for (String task : this.registered.get(appName).getRunningTasks())
-    		{
-	    		JSONObject msg = new JSONObject();
-	    		msg.put("stop", "true");
-	    		msg.put("task", task);
-	    		byte[] bytes = new byte[0];
-	    		
-	    		try
-	    		{
-	    			bytes = msg.toString().getBytes("UTF-8");
-	    		}
-	    		catch(UnsupportedEncodingException e)
-	    		{
-	    			System.out.println("UnsupportedEncodingException in terminating application tasks.");
-	    			driver.abort();
-	    		}
-	    		
-	    		ExecutorID executor = this.tasks.get(task).getExecutor().getExecutorId();
-	    		SlaveID slave = this.tasks.get(task).getSlaveId();
-	    			    		
-	    		driver.sendFrameworkMessage(executor, slave, bytes);
-    		}
-    		
+    	if (this.registered.get(appName).getNumRunning() >= 3)
+		{   		
     		//
     		// = Update our application spec with termination flag
     		//
-    		this.registered.get(appName).setAppTerminated();
+    		this.registered.get(appName).terminateApp(driver, new byte[0]);;
 		}
     }
     
     //
     // - On task termination, see if that was the last task for the last app
     //
-    public void frameworkTerminate(SchedulerDriver driver)
+    public void terminateFramework(SchedulerDriver driver)
     {
         //
         // - Check if all the apps are finished (yes it's not the fastest check... but will do for now)
@@ -389,13 +258,13 @@ public class MiniScheduler implements Scheduler
         
         for (AppSpec spec : this.registered.values())
         {
-        	if(!spec.jsonGetBoolean("app_terminated"))
+        	if(!spec.getAppTerminated())
     		{
         		allAppsTerminated = false;
     			break;
     		}
         	
-        	if(spec.jsonGetInt("running_tasks") != 0)
+        	if(spec.getNumRunning()!= 0)
         	{
         		allTasksStopped = false;
         		break;

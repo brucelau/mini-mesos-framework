@@ -1,10 +1,12 @@
 package com.adsk.miniframework;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
 
-import org.apache.mesos.Protos.ExecutorInfo;
+import org.apache.mesos.Protos.*;
+import org.apache.mesos.SchedulerDriver;
 import org.json.simple.JSONObject;
 
 public class AppSpec
@@ -14,22 +16,12 @@ public class AppSpec
 	// - Identifier for the app
 	//
 	public final String name;
-
+	
 	//
-	// - Executor info specced by the team
-	// - assume for now that communication is handled for us
-	// - otherwise, will have to add callback in this class
-	// - run when status update is from a particular app
+	// - executors: map from executor name to ExecutorInfo for speed
 	//
-	public ExecutorInfo executor;
-	public List<ExecutorInfo> executors;
-
-	//
-	// - required resources per task
-	//
-	private double reqCpu;
-	private double reqMem;
-
+	private HashMap<String, ExecutorSpec> executors;
+	
 	//
 	// - allocated resources
 	//
@@ -38,151 +30,166 @@ public class AppSpec
 	private double allocMem;
 
 	//
-	// - Use JSONObject instead
-	// - Should be easier to pass around threads as data
-	//
-	private JSONObject json;
-
-	//
-	// - Terminated application
+	// - Flags for app termination
 	//
 	private boolean appTerminated;
 
-	//
-	// - Tasks
-	//
-	private HashMap<String, TaskSpec> tasksRequired;
-	private List<String> tasksLaunched;
-	private List<String> tasksRunning;
-
-	public AppSpec(String name, double reqCpu, double reqMem, ExecutorInfo executor)
+	public AppSpec(String name)
 	{
 		this.name = name;
-		this.executor = executor;
-
-		this.reqCpu = reqCpu;
-		this.reqMem = reqMem;
-
 		this.allocInstances = 0;
 		this.allocCpu = 0;
 		this.allocMem = 0;
-
-		this.tasksLaunched = new ArrayList<String>();
-		this.tasksRunning = new ArrayList<String>();
-
-		//
-		// - Make an empty json using jsonUpdate()
-		//
-		this.json = new JSONObject();
-		this.jsonUpdate();
+		this.executors = new HashMap<String, ExecutorSpec>();
 	}
 
-	private void jsonUpdate()
+	//
+	// - Adds an executor
+	//
+	public void putExecutor(String executorName, ExecutorInfo executorInfo, String image, double reqCpu, double reqMem, int instances, JSONObject verbatim)
 	{
-		//
-		// - Just put new specs into the json
-		//
-		this.json.put("name", this.name);
-		this.json.put("required_cpus", this.reqCpu);
-		this.json.put("required_mem", this.reqMem);
-		this.json.put("allocated_instances", this.allocInstances);
-		this.json.put("allocated_cpus", this.allocCpu);
-		this.json.put("allocated_mem", this.allocMem);
-		this.json.put("launched_tasks", this.tasksLaunched.size());
-		this.json.put("running_tasks", this.tasksRunning.size());
-		this.json.put("stopped_tasks", this.tasksLaunched.size() - this.tasksRunning.size());
-		this.json.put("app_terminated", this.appTerminated);
+		ExecutorSpec executor = new ExecutorSpec(executorInfo, image, reqCpu, reqMem, instances, verbatim);
+		this.executors.put(executorName, executor);
 	}
-
+	
 	//
 	// - Methods to modify resource book keeping
 	//
-	public void putLaunchedTask(String task)
+	public void putLaunchedTask(String executorName, TaskID task)
 	{
 		//
 		// - Just keeping track of tasks launched; could use a hashtable....
 		//
 		this.allocInstances++;
-		this.allocCpu += this.reqCpu;
-		this.allocMem += this.reqMem;
-		this.tasksLaunched.add(task);
-		this.jsonUpdate();
+		this.allocCpu += this.executors.get(executorName).getRequiredCpu();
+		this.allocMem += this.executors.get(executorName).getRequiredMem();
+		this.executors.get(executorName).putLaunchedTask(task);
 	}
 
-	public void putRunningTask(String task)
+	public void putRunningTask(String executorName, TaskID task)
 	{
-		this.tasksRunning.add(task);
-		this.jsonUpdate();
+		this.executors.get(executorName).putRunningTask(task);
 	}
 
-	public void putStoppedTask(String task)
+	public void putStoppedTask(String executorName, TaskID task)
 	{
 		//
 		// - Again, keeping track of tasks stopped
 		//
 		this.allocInstances--;
-		this.allocCpu -= this.reqCpu;
-		this.allocMem -= this.reqMem;
-		this.tasksRunning.remove(task);
-		this.jsonUpdate();
+		this.allocCpu -= this.executors.get(executorName).getRequiredCpu();
+		this.allocMem -= this.executors.get(executorName).getRequiredMem();
+		this.executors.get(executorName).putStoppedTask(task);
 	}
-
-	public List<String> getLaunchedTasks()
-	{
-		return this.tasksLaunched;
-	}
-
-	public List<String> getRunningTasks()
-	{
-		return this.tasksRunning;
-	}
-
-	public List<ExecutorInfo> getExecutors()
-	{
-		return this.executors;
-	}
-
+	
 	//
 	// - Set the app to terminated
 	//
-	public void setAppTerminated()
+	public void terminateApp(SchedulerDriver driver, byte[] payload)
 	{
+		if (this.appTerminated)
+		{
+			return;
+		}
 		this.appTerminated = true;
-		this.jsonUpdate();
+		
+		for (ExecutorSpec executor : this.executors.values())
+		{
+			executor.stopAllTasks(driver, payload);
+		}
 	}
-
+	
+	//
+	// - Various getters for info about the apps
+	//	
+	public boolean getAppTerminated()
+	{
+		return this.appTerminated;
+	}
+	
+	public HashMap<String, ExecutorSpec> getExecutors()
+	{
+		return this.executors;
+	}
+	
+	public int getNumRunning()
+	{
+		int sum = 0;
+		for (ExecutorSpec executor : this.executors.values())
+		{
+			sum += executor.getNumRunning();
+		}
+		return sum;
+	}
+	
+	public int getNumLaunched()
+	{
+		int sum = 0;
+		for (ExecutorSpec executor : this.executors.values())
+		{
+			sum += executor.getNumLaunched();
+		}
+		return sum;
+	}
+	
+	public List<TaskID> getLaunchedTasks()
+	{
+		List<TaskID> tasks = new ArrayList<TaskID>();
+		for (ExecutorSpec eSpec : this.executors.values())
+		{
+			tasks.addAll(eSpec.getLaunchedTasks());
+		}
+		return tasks;
+	}
+	
+	public List<TaskID> getRunningTasks()
+	{
+		List<TaskID> tasks = new ArrayList<TaskID>();
+		for (ExecutorSpec eSpec : this.executors.values())
+		{
+			tasks.addAll(eSpec.getRunningTasks());
+		}
+		return tasks;
+	}
+	
+	//
+	// - Get resources used
+	//
+	public double getCpuUsed()
+	{
+		double sum = 0;
+		for (ExecutorSpec executor : this.executors.values())
+		{
+			sum += executor.getRequiredCpu() * executor.getNumRunning();
+		}
+		return sum;
+	}
+	
+	public double getMemUsed()
+	{
+		double sum = 0;
+		for (ExecutorSpec executor : this.executors.values())
+		{
+			sum += executor.getRequiredMem() * executor.getNumRunning();
+		}
+		return sum;
+	}
+		
 	//
 	// - Retrieves the entire jsonstring
 	//
-	public String jsonString()
+	public String getJsonString()
 	{
 		//
 		// - Just return the json string
 		//
-		return this.json.toJSONString();
+		//
+		JSONObject json = new JSONObject();
+		json.put("name", this.name);
+		json.put("allocated_instances", this.allocInstances);
+		json.put("allocated_cpus", this.allocCpu);
+		json.put("allocated_mem", this.allocMem);
+		json.put("app_terminated", this.appTerminated);
+		return json.toJSONString();
 	}
-
-	//
-	// - Various getters for info about the apps
-	//
-	public String jsonGetString(String key)
-	{
-		return this.json.get(key).toString();
-	}
-
-	public int jsonGetInt(String key)
-	{
-		return Integer.parseInt(this.jsonGetString(key));
-	}
-
-	public double jsonGetDouble(String key)
-	{
-		return Double.parseDouble(this.jsonGetString(key));
-	}
-
-	public boolean jsonGetBoolean(String key)
-	{
-		return Boolean.parseBoolean(this.jsonGetString(key));
-	}
-
 }
