@@ -1,8 +1,6 @@
 import com.adsk.miniframework.Application;
-import com.adsk.miniframework.ExecutorSpec;
 
 import java.util.Arrays;
-import java.util.UUID;
 
 import static org.mockito.Mockito.*;
 import static org.junit.Assert.*;
@@ -12,10 +10,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import org.apache.mesos.Protos.*;
+import org.apache.mesos.SchedulerDriver;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
@@ -37,6 +35,9 @@ public class ApplicationTest
 	private Application spec;
 	private ExecutorInfo executorInfo;
 	private TaskInfo task;
+	
+	@Mock
+	private SchedulerDriver driver;
 	
 	@Before
 	public void setup()
@@ -141,50 +142,54 @@ public class ApplicationTest
 		assertEquals(Arrays.asList(this.task.getTaskId()), this.spec.getLaunchedTasks());
 		assertEquals(1, this.spec.getNumLaunched());
 	}
-}	
-//	@Test
-//	public void testTaskRunning() throws Exception
-//	{
-//		//
-//		// - Tests that logic with launched and running tasks is correct
-//		//
-//		String task = "test_task_running";
-//		this.spec.putLaunchedTask(task);
-//		this.spec.putRunningTask(task);
-//		
-//		assertEquals(Arrays.asList(task), this.spec.getRunningTasks());
-//		assertEquals(1, this.spec.getNumRunning());
-//	}
-//	
-//	@Test
-//	public void testTaskStopped() throws Exception
-//	{
-//		//
-//		// - Tests that logic with stopped tasks is corect
-//		//
-//		String task = "test_task_stopped";
-//		this.spec.putLaunchedTask(task);
-//		this.spec.putRunningTask(task);
-//		this.spec.putStoppedTask(task);
-//		
-//		assertEquals(Arrays.asList(task), this.spec.getLaunchedTasks());
-//		assertEquals(Arrays.asList(), this.spec.getRunningTasks());
-//		assertEquals(1, this.spec.getNumLaunched());
-//		assertEquals(0, this.spec.getNumRunning());
-//	}
-//	
-//	@Test
-//	public void testAppTerminated() throws Exception
-//	{
-//		//
-//		// - Makes sure that apps can be terminated properly
-//		//
-//		String task = "test_task_stopped";
-//		this.spec.putLaunchedTask(task);
-//		this.spec.putRunningTask(task);
-//		this.spec.putStoppedTask(task);
-//		this.spec.setAppTerminated();
-//		
-//		assertTrue(this.spec.getAppTerminated());
-//	}
-//}
+	
+	@Test
+	public void testTaskRunning() throws Exception
+	{
+		//
+		// - Tests that logic with launched and running tasks is correct
+		// - Launched tasks should have one task after launch
+		//
+		this.spec.putLaunchedTask(this.executorInfo.getExecutorId().getValue(), this.task.getTaskId());
+		assertEquals(Arrays.asList(task.getTaskId()), this.spec.getLaunchedTasks());
+		
+		//
+		// - When task is running, launched tasks should be empty
+		//
+		this.spec.putRunningTask(this.executorInfo.getExecutorId().getValue(), this.task.getTaskId());
+		assertEquals(Arrays.asList(), this.spec.getLaunchedTasks());
+		assertEquals(Arrays.asList(task.getTaskId()), this.spec.getRunningTasks());
+		assertEquals(0, this.spec.getNumLaunched());
+		assertEquals(1, this.spec.getNumRunning());
+	}
+	
+	@Test
+	public void testTaskStopped() throws Exception
+	{
+		//
+		// - Tests that logic with stopped tasks is corect
+		//
+		this.spec.putLaunchedTask(this.executorInfo.getExecutorId().getValue(), this.task.getTaskId());
+		this.spec.putRunningTask(this.executorInfo.getExecutorId().getValue(), this.task.getTaskId());
+		this.spec.putStoppedTask(this.executorInfo.getExecutorId().getValue(), this.task.getTaskId());
+		
+		assertEquals(Arrays.asList(), this.spec.getLaunchedTasks());
+		assertEquals(Arrays.asList(), this.spec.getRunningTasks());
+		assertEquals(0, this.spec.getNumRunning());
+	}
+	
+	@Test
+	public void testAppTerminated() throws Exception
+	{
+		//
+		// - Makes sure that apps can be terminated properly
+		//
+		String task = "test_task_stopped";
+		this.spec.putLaunchedTask(this.executorInfo.getExecutorId().getValue(), this.task.getTaskId());
+		this.spec.putRunningTask(this.executorInfo.getExecutorId().getValue(), this.task.getTaskId());
+		this.spec.putStoppedTask(this.executorInfo.getExecutorId().getValue(), this.task.getTaskId());
+		this.spec.terminateApp(this.driver, new byte[0]);
+		
+		assertTrue(this.spec.getAppTerminated());
+	}
+}

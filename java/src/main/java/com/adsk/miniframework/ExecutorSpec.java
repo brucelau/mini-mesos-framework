@@ -201,9 +201,9 @@ public class ExecutorSpec
 		this.tasksLaunched.remove(task);
 	}
 	
-	public void putStoppedTask(TaskID task)
+	public void removeRunningTask(TaskID task)
 	{
-		this.tasksLaunched.remove(task);
+		this.tasksRunning.remove(task);
 	}
 	
 	//

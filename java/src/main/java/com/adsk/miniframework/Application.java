@@ -84,7 +84,8 @@ public class Application
 		this.allocInstances--;
 		this.allocCpu -= this.executors.get(executorName).getRequiredCpu();
 		this.allocMem -= this.executors.get(executorName).getRequiredMem();
-		this.executors.get(executorName).putStoppedTask(task);
+		this.executors.get(executorName).removeLaunchedTask(task);
+		this.executors.get(executorName).removeRunningTask(task);
 	}
 	
 	//
