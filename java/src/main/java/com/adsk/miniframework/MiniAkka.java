@@ -9,7 +9,33 @@ import akka.actor.*;
 
 public class MiniAkka
 {
-
+	//
+	// - Bunch of toy messages to pass around
+	// - Terminate != akka.actor.Terminated (that's a state, this is an imperative)
+	//
+    public static class Terminate
+    {
+    	private static Terminate terminate = new Terminate();
+    	private Terminate(){}
+    	public static Terminate getInstance()
+    	{
+    		return terminate;
+    	}
+    }
+    
+    public static class Initiate
+    {
+    	private static Initiate initiate = new Initiate();
+    	private Initiate(){}
+    	public static Initiate getInstance()
+    	{
+    		return initiate;
+    	}
+    }
+    
+    //
+    // - Actor so called as its task is to just sleep
+    //
 	public static class Sleepy extends UntypedActor
 	{
 		private JSONParser parser;
@@ -33,6 +59,7 @@ public class MiniAkka
 			this.status = TaskStatus.newBuilder().setTaskId(this.task.getTaskId()).setState(TaskState.TASK_RUNNING).build();
 			System.out.println("Running task " + task.getTaskId().getValue() + " using actor" + this.getSelf().toString());
 			this.driver.sendStatusUpdate(this.status);
+			this.getSelf().tell(Initiate.getInstance(), this.getSelf());
 		}
 		
 		@Override
@@ -47,7 +74,7 @@ public class MiniAkka
 		}
 		
 		@Override
-		public void onReceive(Object message)
+		public void onReceive(Object message) throws Exception
 		{
 		
 			if (message instanceof JSONObject)
@@ -62,6 +89,7 @@ public class MiniAkka
 					//
 					// - queue poisonpill; this will trigger the task_finished status update
 					//
+					System.out.println("JSON stop payload received");
 					this.getSelf().tell(PoisonPill.getInstance(), this.getSelf());
 				}
 
@@ -74,7 +102,17 @@ public class MiniAkka
 				}
 			}
 			
-			else if (message instanceof ExecutorSpec.Terminate)
+			else if (message instanceof Initiate)
+			{
+				//
+				// - Put your task here
+				//
+				System.out.println("Task running");
+				Thread.sleep(10000);
+				driver.sendFrameworkMessage(("Task running: " +  this.task.getTaskId().getValue()).getBytes());
+			}
+			
+			else if (message instanceof Terminate)
 			{
 				
 				//

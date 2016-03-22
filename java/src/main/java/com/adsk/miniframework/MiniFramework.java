@@ -1,5 +1,7 @@
 package com.adsk.miniframework;
 
+import java.util.UUID;
+
 import org.apache.mesos.*;
 import org.apache.mesos.Protos.*;
 
@@ -14,7 +16,7 @@ public class MiniFramework
 
     public static void main(String[] args) throws Exception
     {
-        if (args.length < 1 || args.length > 2)
+        if (args.length < 1 )
         {
             usage();
             System.exit(1);
@@ -23,9 +25,11 @@ public class MiniFramework
         // 
         // - Standard framework builder used by example framework
         // 
+        
         FrameworkInfo.Builder frameworkBuilder = FrameworkInfo.newBuilder()
         .setUser("") // Have Mesos fill in the current user.
         .setName("MiniFramework Java")
+        .setId(FrameworkID.newBuilder().setValue("MiniFramework-" + UUID.randomUUID()).build())
         .setCheckpoint(true);
 
         // 
@@ -79,8 +83,7 @@ public class MiniFramework
 
             frameworkBuilder.setPrincipal(System.getenv("PRINCIPAL"));
 
-            driver = new MesosSchedulerDriver(
-                scheduler,
+            driver = new MesosSchedulerDriver(scheduler,
                 frameworkBuilder.build(),
                 args[0],
                 implicitAcknowledgements,
@@ -90,8 +93,9 @@ public class MiniFramework
         // 
         // - Run the thing
         // 
+        System.out.println("Running scheduler driver...");
         int status = driver.run() == Status.DRIVER_STOPPED ? 0 : 1;
-
+        
         // Ensure that the driver process terminates.
         driver.stop();
 

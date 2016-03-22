@@ -15,30 +15,14 @@ public class MiniAllocator
 	//
 	// Builds a taskinfo with info provided
 	//
-    private static TaskInfo buildTask(AppSpec aSpec, ExecutorSpec eSpec, Offer offer)
+    private static TaskInfo buildTask(Application app, ExecutorSpec eSpec, Offer offer)
     {
     	
         // 
         // - Set task ID as name + number launched 
         // 
-        TaskID taskID = TaskID.newBuilder().setValue(aSpec.name + "-" + UUID.randomUUID()).build();
-        
-		//
-		// - Build docker & container info; there has to be a different dockerinfo for tasks
-        // - because the executor will use a pre-baked image
-        // - the task will use an extensible image
-		//
-		ContainerInfo.DockerInfo docker = ContainerInfo.DockerInfo.newBuilder()
-										.setForcePullImage(true)
-										.setImage(eSpec.getTaskImage())
-										.setNetwork(ContainerInfo.DockerInfo.Network.HOST)
-										.build();
-		
-		ContainerInfo container = ContainerInfo.newBuilder()
-								.setType(ContainerInfo.Type.DOCKER)
-								.setDocker(docker)
-								.build();
-		
+        TaskID taskID = TaskID.newBuilder().setValue(app.name + "-" + UUID.randomUUID()).build();
+
         // 
         // - Queue the task onto the launcher
         // 
@@ -56,10 +40,10 @@ public class MiniAllocator
                                       .setName("mem")
                                       .setType(Value.Type.SCALAR)
                                       .setScalar(Value.Scalar.newBuilder().setValue(eSpec.getRequiredMem())))
-                        .setContainer(container)
-                        .setExecutor(ExecutorInfo.newBuilder(eSpec.executor))
+                        //.setContainer(container)
+                        //.setCommand(CommandInfo.newBuilder().setValue("echo").build())
+                        .setExecutor(eSpec.executor)
                         .build();
-        
         return task;
     }
     
@@ -102,12 +86,8 @@ public class MiniAllocator
     // - Naieve allocation scheme.
     // - Want to return a list of taskinfo 
 	//
-	public static void naieveAllocate(SchedulerDriver driver, 
-												Offer offer, 
-												HashMap<String, AppSpec> apps, 
-												int instanceLimit, 
-												double cpuLimit, 
-												double memLimit)
+	public static List<TaskInfo> naieveAllocate(SchedulerDriver driver, Offer offer, HashMap<String, Application> apps, HashMap<String, String> tasksToApps, 
+										int instanceLimit, double cpuLimit, double memLimit)
 	{
 		//
 		// - Tasks that we will launch
@@ -117,7 +97,7 @@ public class MiniAllocator
         // 
         // - Shuffle the list of specs, for fairness (will be greedy after shuffle)
         // 
-        List<AppSpec> shuffled = new ArrayList<AppSpec>(apps.values());
+        List<Application> shuffled = new ArrayList<Application>(apps.values());
         Collections.shuffle(shuffled);
 		// 
         // - Build an offer launcher; functions just as queue of tasks
@@ -149,7 +129,7 @@ public class MiniAllocator
         // 
         // - Main loop queueing tasks
         // 
-        for (AppSpec aSpec : shuffled)
+        for (Application app : shuffled)
         {   
         	
         	//
@@ -157,9 +137,7 @@ public class MiniAllocator
         	// - if the team is already at quota,
         	// continue
         	//
-        	if (aSpec.getAppTerminated() ||
-        			aSpec.getCpuUsed() >= cpuLimit || 
-            		aSpec.getMemUsed() >= memLimit)
+        	if (app.getAppTerminated() || app.getCpuUsed() >= cpuLimit || app.getMemUsed() >= memLimit)
         	{
         		continue;
         	}
@@ -167,17 +145,16 @@ public class MiniAllocator
         	//
         	// - look through each executor wrapper
         	//
-        	for (ExecutorSpec eSpec : aSpec.getExecutors().values())
+        	for (ExecutorSpec eSpec : app.getExecutors().values())
         	{
 	
 	            // 
         		// if offer isn't enough for task, 
+        		// or if there are enough launched tasks queued
 	            // - continue
 	            // 
-	            if (eSpec.getNumRunning() >= instanceLimit || 
-	            		
-	            		eSpec.getRequiredCpu() > remainingCpu || 
-	            		eSpec.getRequiredMem() > remainingMem)
+	            if (eSpec.getNumRunning() >= instanceLimit || eSpec.getRequiredCpu() > remainingCpu || eSpec.getRequiredMem() > remainingMem
+	            		|| eSpec.getNumLaunched() >= eSpec.getRequiredInstances())
 	            {
 	                continue;
 	            }
@@ -185,7 +162,7 @@ public class MiniAllocator
 	            //
 	            // - Build the task in our naieve algorithm; pass the application, executor, offer along
 	            //
-	            TaskInfo task = buildTask(aSpec, eSpec, offer);
+	            TaskInfo task = buildTask(app, eSpec, offer);
 		    
 	            //
 	            // - Update list of tasks to be sent to driver
@@ -193,9 +170,14 @@ public class MiniAllocator
 	            tasks.add(task);
 	            
 	            //
-	            // - Set the task as being launched in records
+	            // - Set the task as being launched for the app
 	            //
-	            aSpec.putLaunchedTask(eSpec.executor.getExecutorId().getValue(), task.getTaskId());
+	            app.putLaunchedTask(eSpec.executor.getExecutorId().getValue(), task.getTaskId());
+	            
+	            //
+	            // - Update the hashmap for reverse search from task to app
+	            //
+	            tasksToApps.put(task.getTaskId().getValue(), app.name);
 	            
 	            System.out.println("Launching task " + task.getTaskId().getValue() + " using offer " + offer.getId().getValue());
 
@@ -208,5 +190,16 @@ public class MiniAllocator
         // - Accept the resource offer
         //
         acceptOffer(tasks, driver, offer);   
+        
+        return tasks;
+	}
+
+	//
+	// - DRF Allocation
+	//
+	public static void drfAllocate(SchedulerDriver driver, Offer offer, HashMap<String, Application> apps, HashMap<String, String> tasksToApps, 
+			int instanceLimit, double cpuLimit, double memLimit)
+	{
+		
 	}
 }

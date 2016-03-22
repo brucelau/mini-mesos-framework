@@ -1,14 +1,9 @@
 package com.adsk.miniframework;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-
-import java.util.ArrayList;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Collections;
 
 import org.apache.mesos.*;
 import org.apache.mesos.Protos.*;
@@ -26,9 +21,9 @@ public class MiniScheduler implements Scheduler
 	
     // 
 	// - Members for applications
-    // - Dict containing registered applications (name: appspec)
+    // - Dict containing registeredApps applications (name: Application)
     // 
-    private HashMap<String, AppSpec> registered;
+    private HashMap<String, Application> registeredApps;
     private double cpuLimit;
     private double memLimit;
     private int instanceLimit;
@@ -36,7 +31,7 @@ public class MiniScheduler implements Scheduler
     //
     // - Dict from taskids to app names
     //
-    private HashMap<String, String> tasks;
+    private HashMap<String, String> tasksToApps;
     
     // 
     // - book keeping constants used by e.g. framework
@@ -44,17 +39,37 @@ public class MiniScheduler implements Scheduler
     private boolean implicitAcknowledgements;
    
     //
-    // - a toy scheduler with some limits and a couple of specs
+    // - a toy scheduler with some limits and a toy ubuntu task for the executor to run
     //
     public MiniScheduler(boolean implicitAcknowledgements)
     {
-    	this(implicitAcknowledgements, new HashMap<String, AppSpec>(), 5, 3, 256);
+    	this(implicitAcknowledgements, new HashMap<String, Application>(), 5, 3, 256);
+    	try
+    	{
+	    	Application app1 = new Application("app1");
+	    	ExecutorSpec exe1 = new ExecutorSpec("exec1",
+	    										"lmok/mini-executor",
+	    										"",
+	    										"/opt/docker_executor",
+	    										false,
+	    										1.0,
+	    										32.0,
+	    										1,
+	    										new JSONObject());
+	    	app1.putExecutorSpec(exe1);
+	    	this.registeredApps.put(app1.name, app1);
+	    	
+    	}
+    	catch (Exception e)
+    	{
+    		System.out.println("Could not create toy executor");
+    	}
     }
     
     //
     // - External construction of apps
     //
-    public MiniScheduler(boolean implicitAcknowledgements, HashMap<String, AppSpec> teams)
+    public MiniScheduler(boolean implicitAcknowledgements, HashMap<String, Application> teams)
     {
     	//
     	// - Just use these limitations for now
@@ -65,47 +80,49 @@ public class MiniScheduler implements Scheduler
     //
     // - Proper constructor; specify everything
     //
-    public MiniScheduler(boolean implicitAcknowledgements, HashMap<String, AppSpec> teams, int instanceLimit, double cpuLimit, double memLimit)
+    public MiniScheduler(boolean implicitAcknowledgements, HashMap<String, Application> teams, int instanceLimit, double cpuLimit, double memLimit)
     {
         
         this.implicitAcknowledgements = implicitAcknowledgements;
         this.parser = new JSONParser();
         
         // 
-        // - Resource limits per registered app (may be one task)
+        // - Resource limits per registeredApps app (may be one task)
         // 
         this.instanceLimit = instanceLimit;
         this.cpuLimit = cpuLimit;
         this.memLimit = memLimit;
-        this.registered = new HashMap<String, AppSpec>(teams);
-        this.tasks = new HashMap<String, String>();
+        this.registeredApps = new HashMap<String, Application>(teams);
+        this.tasksToApps = new HashMap<String, String>();
         
     }
     
-    public AppSpec getSpecs(String name)
+    public Application getSpecs(String name)
     {
     	//
-    	// - Gets specs for registered app
+    	// - Gets specs for registeredApps app
     	//
-        return registered.get(name);
+        return registeredApps.get(name);
     }
 
-    public void putSpecs(String name, AppSpec spec)
+    public void putSpecs(String name, Application spec)
     {
     	//
-    	// - Update specs for registered app
+    	// - Update specs for registeredApps app
     	//
-        registered.put(name, spec);
+        registeredApps.put(name, spec);
     }
     
     @Override
     public void registered(SchedulerDriver driver, FrameworkID frameworkId, MasterInfo masterInfo)
     {
-        System.out.println("Registered! ID = " + frameworkId.getValue());
+        System.out.println("registered framework: " + frameworkId.getValue());
     }
 
     @Override
-    public void reregistered(SchedulerDriver driver, MasterInfo masterInfo){}
+    public void reregistered(SchedulerDriver driver, MasterInfo masterInfo){
+        System.out.println("driver reregistered");
+    }
 
     @Override
     public void disconnected(SchedulerDriver driver) 
@@ -119,23 +136,22 @@ public class MiniScheduler implements Scheduler
 
     	//
         // - Wish there were more documentation on the Offer class...
-        // - TODO use allocator here
+        // - Use allocation scheme here. The allocator has to update the # of launched tasks.
         //
         for (Offer offer : offers)
         {
-        	MiniAllocator.naieveAllocate(driver, offer, this.registered, instanceLimit, cpuLimit, memLimit);
+        	MiniAllocator.naieveAllocate(driver, offer, this.registeredApps, this.tasksToApps, instanceLimit, cpuLimit, memLimit);
         }
     }
 
     @Override
     public void statusUpdate(SchedulerDriver driver, TaskStatus status)
     {
-
+    	
         // 
-        // - Get the application name by splitting the task # off
+        // - Get the application name using the reverse search dict
         // 
-        String[] splitted = status.getTaskId().getValue().split("-");
-        String name = String.join("-", Arrays.copyOfRange(splitted, 0, splitted.length - 1));
+    	String appName = this.tasksToApps.get(status.getTaskId().getValue());
         String executorName = status.getExecutorId().getValue();
         //
         // - Get the message from the status update
@@ -152,7 +168,7 @@ public class MiniScheduler implements Scheduler
         
         if (status.getState() == TaskState.TASK_RUNNING)
         {
-        	this.registered.get(name).putRunningTask(executorName, status.getTaskId());
+        	this.registeredApps.get(appName).putRunningTask(executorName, status.getTaskId());
         }
         // 
         // - Finished task; retrieve the name and update the app registration
@@ -163,9 +179,9 @@ public class MiniScheduler implements Scheduler
             //
         	// - Tell the spec that a task has finished
             // - If the task is the app's final task (find it in the Json message),
-            // - update the app to be terminated. See AppSpec.taskStopped().
+            // - update the app to be terminated. See Application.taskStopped().
             //
-            this.registered.get(name).putStoppedTask(executorName, status.getTaskId());         
+            this.registeredApps.get(appName).putStoppedTask(executorName, status.getTaskId());         
         }
         
         //
@@ -181,7 +197,7 @@ public class MiniScheduler implements Scheduler
             
             // 
             // - aborting driver shuts everything down;
-            // - otherwise will have to update registered specs
+            // - otherwise will have to update registeredApps specs
             // 
             driver.abort();
         }
@@ -197,7 +213,7 @@ public class MiniScheduler implements Scheduler
         // - See if we should kill all tasks in the app
         // - then see if we have killed all tasks in all apps
         //
-        this.terminateApp(driver, name);
+        this.terminateApp(driver, appName);
         this.terminateFramework(driver);
         
         if (!implicitAcknowledgements)
@@ -210,16 +226,28 @@ public class MiniScheduler implements Scheduler
     // - We're not using these for now...
     //
     @Override
-    public void offerRescinded(SchedulerDriver driver, OfferID offerId) {}
+    public void offerRescinded(SchedulerDriver driver, OfferID offerId) 
+    {
+    	System.out.println("offer rescinded");
+    }
 
     @Override
-    public void frameworkMessage(SchedulerDriver driver, ExecutorID executorId, SlaveID slaveId, byte[] data) {}
+    public void frameworkMessage(SchedulerDriver driver, ExecutorID executorId, SlaveID slaveId, byte[] data) 
+    {
+    	System.out.println("framework message: " + new String(data, StandardCharsets.UTF_8));
+    }
 
     @Override
-    public void slaveLost(SchedulerDriver driver, SlaveID slaveId) {}
+    public void slaveLost(SchedulerDriver driver, SlaveID slaveId) 
+    {
+    	System.out.println("--> Slave " + slaveId.getValue() + " lost");
+    }
 
     @Override
-    public void executorLost(SchedulerDriver driver, ExecutorID executorId, SlaveID slaveId, int status) {}
+    public void executorLost(SchedulerDriver driver, ExecutorID executorId, SlaveID slaveId, int status) 
+    {
+    	System.out.println("--> Executor " + executorId.getValue() + " lost with status " + status);
+    }
 
     public void error(SchedulerDriver driver, String message)
     {
@@ -229,19 +257,20 @@ public class MiniScheduler implements Scheduler
     //
     // - On status update, this checks if the task's application
     // - is entirely finished. Our e.g. condition is to stop any application with 2 running tasks.
-    // - TODO replace with termination function in appspec
+    // - TODO replace with termination function in Application
     //
     public void terminateApp(SchedulerDriver driver, String appName)
     {
     	//
     	// - Only have to modify this boolean condition for whatever termination condition is needed
     	//
-    	if (this.registered.get(appName).getNumRunning() >= 3)
+    	if (this.registeredApps.get(appName).getNumRunning() >= 3)
 		{   		
     		//
     		// = Update our application spec with termination flag
     		//
-    		this.registered.get(appName).terminateApp(driver, new byte[0]);;
+    		System.out.println("Sending kill to " + appName);
+    		this.registeredApps.get(appName).terminateApp(driver, new byte[0]);;
 		}
     }
     
@@ -256,7 +285,7 @@ public class MiniScheduler implements Scheduler
         boolean allAppsTerminated = true;
         boolean allTasksStopped = true;
         
-        for (AppSpec spec : this.registered.values())
+        for (Application spec : this.registeredApps.values())
         {
         	if(!spec.getAppTerminated())
     		{

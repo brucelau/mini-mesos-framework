@@ -1,4 +1,4 @@
-import com.adsk.miniframework.AppSpec;
+import com.adsk.miniframework.Application;
 import com.adsk.miniframework.ExecutorSpec;
 
 import java.util.Arrays;
@@ -21,7 +21,7 @@ import org.json.simple.parser.JSONParser;
 
 
 @RunWith(MockitoJUnitRunner.class)
-public class AppSpecTest
+public class ApplicationTest
 {	
 	private final JSONParser parser = new JSONParser();
 	
@@ -34,7 +34,7 @@ public class AppSpecTest
 	private String cmd;
 	private String image;
 	
-	private AppSpec spec;
+	private Application spec;
 	private ExecutorInfo executorInfo;
 	private TaskInfo task;
 	
@@ -52,7 +52,7 @@ public class AppSpecTest
 		this.name = "test";
 		this.cpu = 1.0;
 		this.mem = 16;
-		this.spec = new AppSpec(this.name);
+		this.spec = new Application(this.name);
 		this.json = new JSONObject();
 
 		//
@@ -72,7 +72,7 @@ public class AppSpecTest
                 .setSource("java")
                 .build();
 		
-		this.spec.putExecutor(this.name + "-executor", this.executorInfo, this.image, this.cpu, this.mem, 1, this.json);
+		this.spec.putExecutor(this.executorInfo, this.image, this.cpu, this.mem, 1, this.json);
 		
 		//
 		// - Same for the task

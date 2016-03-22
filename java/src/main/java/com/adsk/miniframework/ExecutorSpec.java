@@ -1,24 +1,22 @@
 package com.adsk.miniframework;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.mesos.*;
 import org.apache.mesos.Protos.*;
-import org.apache.mesos.v1.Protos.ContainerInfo;
 import org.json.simple.JSONObject;
 
 //
-// - Wrapper for ExecutorInfo
+// - Wrapper for ExecutorInfo; mesos documentation requests for Executors to be wrapped
+// and not extended
 //
 public class ExecutorSpec
 {
     //
     // - A tiny message for graceful termination... at some point
     //
-    public static class Terminate{}
-    
+
 	public ExecutorInfo executor;
 	
 	//
@@ -30,7 +28,8 @@ public class ExecutorSpec
 	private int instances;
 	
 	//
-	// - Tasks launched by this executor
+	// - Tasks launched by executor; decreased when the task is running
+	// - Tasks running; increased when launch is complete, decreased when task is stopped
 	//
 	private List<TaskID> tasksLaunched;
 	private List<TaskID> tasksRunning;
@@ -72,10 +71,11 @@ public class ExecutorSpec
 //	}
 	
 	//
-	// - Constructor for Docker -- Somewhat stolen from @podgorj
+	// - Constructor for Docker
 	// - Also follows exactly the pre-baked Dockerfile. 
 	//
-	public ExecutorSpec(String executorName, String executorImage, String taskImage, boolean forcePull, double reqCpu, double reqMem, int instances, JSONObject verbatim) throws Exception
+	public ExecutorSpec(String executorName, String executorImage, String taskImage, String command, 
+						boolean forcePull, double reqCpu, double reqMem, int instances, JSONObject verbatim) throws Exception
 	{
 		//
 		// - Calls below constructor, then builds the executorinfo with the right containeriser
@@ -99,8 +99,8 @@ public class ExecutorSpec
 		//
 		// - Set command to run
 		//
-	    CommandInfo.URI uri = CommandInfo.URI.newBuilder().setValue(new File("/opt/").getCanonicalPath()).build();
-	    CommandInfo cmdInfo = CommandInfo.newBuilder().setValue("./docker_executor").addUris(uri).build();
+//	    CommandInfo.URI uri = CommandInfo.URI.newBuilder().setValue(new File("/opt/docker_executor").getCanonicalPath()).setExecutable(true).build();
+	    CommandInfo cmdInfo = CommandInfo.newBuilder().setValue(command).build();
 		
 		//
 		// - Stick this in the executor
@@ -108,8 +108,18 @@ public class ExecutorSpec
 	    this.executor = ExecutorInfo.newBuilder()
 	                            .setExecutorId(ExecutorID.newBuilder().setValue(executorName))
 	                            .setCommand(cmdInfo)
+	                            .addResources(Resource.newBuilder()
+	                                      .setName("cpus")
+	                                      .setType(Value.Type.SCALAR)
+	                                      .setScalar(Value.Scalar.newBuilder().setValue(this.getRequiredCpu())))
+		                        // Do the same for required mem
+		                        .addResources(Resource.newBuilder()
+		                                      .setName("mem")
+		                                      .setType(Value.Type.SCALAR)
+		                                      .setScalar(Value.Scalar.newBuilder().setValue(this.getRequiredMem())))
 	                            .setName(executorName)
 	                            .setSource("java")
+	                            .setContainer(container)
 	                            .build();
 	}
 	
@@ -136,10 +146,10 @@ public class ExecutorSpec
 	// - Use this to kill all tasks gracefully with a payload
 	// - Note: SchedulerDriver.killTask() is not reliable, so we have to spin our own
 	// - solution for both graceful and reliable shutdown of tasks
-//	
-//	//
-//	// - This will make the actors cascade-suicide
-//	//	
+	
+	//
+	// - This will make the actors cascade-suicide
+	//	
 //	for (String task : this.registered.get(appName).getRunningTasks())
 //	{
 //		JSONObject msg = new JSONObject();
@@ -184,6 +194,11 @@ public class ExecutorSpec
 	public void putLaunchedTask(TaskID task)
 	{
 		this.tasksLaunched.add(task);
+	}
+	
+	public void removeLaunchedTask(TaskID task)
+	{
+		this.tasksLaunched.remove(task);
 	}
 	
 	public void putStoppedTask(TaskID task)

@@ -1,6 +1,5 @@
 package com.adsk.miniframework;
 
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
@@ -9,7 +8,7 @@ import org.apache.mesos.Protos.*;
 import org.apache.mesos.SchedulerDriver;
 import org.json.simple.JSONObject;
 
-public class AppSpec
+public class Application
 {
 
 	//
@@ -34,7 +33,7 @@ public class AppSpec
 	//
 	private boolean appTerminated;
 
-	public AppSpec(String name)
+	public Application(String name)
 	{
 		this.name = name;
 		this.allocInstances = 0;
@@ -46,10 +45,15 @@ public class AppSpec
 	//
 	// - Adds an executor
 	//
-	public void putExecutor(String executorName, ExecutorInfo executorInfo, String image, double reqCpu, double reqMem, int instances, JSONObject verbatim)
+	public void putExecutor(ExecutorInfo executorInfo, String image, double reqCpu, double reqMem, int instances, JSONObject verbatim)
 	{
 		ExecutorSpec executor = new ExecutorSpec(executorInfo, image, reqCpu, reqMem, instances, verbatim);
-		this.executors.put(executorName, executor);
+		this.executors.put(executorInfo.getName(), executor);
+	}
+	
+	public void putExecutorSpec(ExecutorSpec executorSpec)
+	{
+		this.executors.put(executorSpec.executor.getName(), executorSpec);
 	}
 	
 	//
@@ -65,9 +69,10 @@ public class AppSpec
 		this.allocMem += this.executors.get(executorName).getRequiredMem();
 		this.executors.get(executorName).putLaunchedTask(task);
 	}
-
+	
 	public void putRunningTask(String executorName, TaskID task)
 	{
+		this.executors.get(executorName).removeLaunchedTask(task);
 		this.executors.get(executorName).putRunningTask(task);
 	}
 
