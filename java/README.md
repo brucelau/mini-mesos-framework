@@ -1,6 +1,6 @@
 ## Java Mini Framework
 
-This framework is intended to run applications with groups of tasks to perform in the executors it spawns. Note: right now this only works on a local master/slave setup because we need to use the Mesos Fetcher to find the executor on remote slaves.
+This framework is intended to run applications with groups of tasks to perform in the executors it spawns.
 
 ### Getting started
 
