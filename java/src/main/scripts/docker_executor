@@ -2,9 +2,7 @@
 
 : ${FMWK_JAR_DIR:=/opt}
 : ${MESOS_LIB_DIR:=/usr/lib}
-: ${FWNK_EXECUTOR_LOG:=/var/log}
 
 exec java -cp ${FMWK_JAR_DIR}/MiniFramework-0.0.1-SNAPSHOT-jar-with-dependencies.jar \
- -Djava.library.path=${MESOS_LIB_DIR} \
-  com.adsk.miniframework.MiniExecutor >> ${FWNK_EXECUTOR_LOG}/executor.log 2>&1
-  
+ -Djava.library.path=${MESOS_LIB_DIR}/ \
+  com.adsk.miniframework.DockerExecutor

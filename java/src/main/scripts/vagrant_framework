@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+: ${FMWK_JAR_DIR:=/vagrant/mini-mesos-framework/java/target}
+: ${MESOS_LIB_DIR:=/usr/lib}
+
+exec java -cp ${FMWK_JAR_DIR}/MiniFramework-0.0.1-SNAPSHOT-jar-with-dependencies.jar \
+ -Djava.library.path=${MESOS_LIB_DIR} \
+  com.adsk.miniframework.MiniFramework  "${@}"
