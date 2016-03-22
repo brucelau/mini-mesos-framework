@@ -5,7 +5,7 @@ This framework is intended to run applications with groups of tasks to perform i
 ### Getting started
 
 #### Step 0
-Make sure that Docker is installed.
+Make sure that JDK8, Maven, and Docker are installed.
 
 Clone and build the Maven project:
 ```
@@ -18,7 +18,7 @@ $ mvn clean package
 ```
 $ docker build -f images/executor/Dockerfile -t lmok/mini-executor .
 ```
-(If you'd rather name the executor container something else go ahead, but you have to change the image name in the MiniScheduler constructor).
+Feel free to rename the executor container to something less mundane, but you have to push it to Dockerhub and change the image name & tag in the MiniScheduler constructor.
 
 #### (playa-mesos) Step 1
 Follow instructions at [**playa-mesos**](https://github.com/mesosphere/playa-mesos) up to step 4. 
@@ -29,22 +29,28 @@ $ cp -r [Path to framework]/mini-mesos-framework mini-mesos-framework
 ```
 
 #### (playa-mesos) Step 2
-Ssh into the mesos master (from playa-mesos/:
+Ssh into the mesos master (from playa-mesos/):
 ```
 vagrant ssh
 ```
 
-#### (playa-mesos) Step 3
 Run the framework:
 ```
-$ cd /vagrant
+$ cd /vagrant/
 $ sh mini-mesos-framework/java/src/main/scripts/vagrant_framework 127.0.1.1:5050
 ```
+*Go grab a coffee on the first run as the framework has to pull the image off of Dockerhub. When you get a status update to TASK_RUNNING then you're in business.*
+
+If you exit the framework with a SIGINT/ctrl-c, you should be able to run `$ sudo docker ps -a` to see the exited docker executor. `$ docker logs [container id]` to see if the task ran.
+
+
+### Architecture
+To come... This vaguely mirrors a [**Marathon**](https://github.com/mesosphere/marathon)/[**Ochopod**](https://github.com/autodesk-cloud/ochopod) setup right now.
 
 ### Troubleshooting:
 
 + Anything vagrant/vmbox related: Don't look at me, blame [**play-mesos**](https://github.com/mesosphere/playa-mesos) instead!
-+ Framework authentication errors: Make sure you didn't ask for the framework to be authenticated with an AUTHENTICATE=true flag.
++ Framework authentication errors: Make sure you didn't ask for the framework to be authenticated with an AUTHENTICATE=true flag. To set up authentication follow mesos instructions [**here**](http://mesos.apache.org/documentation/latest/authentication/). This framework will look for AUTHENTICATE, PRINCIPAL, and SECRET env vars.
 + lillio.mok@gmail.com for other inquiries. 
 + Everything ships with the generic apache license, by the way.
 
