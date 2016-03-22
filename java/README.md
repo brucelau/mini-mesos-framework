@@ -5,68 +5,20 @@ This framework is intended to run applications with groups of tasks to perform i
 ### Getting started
 
 #### Step 0
+Make sure that Docker is installed.
 
 Clone and build the Maven project:
 ```
-$ cd <your_working_directory>
+$ cd [your working directory]
 $ git clone git@github.com:lmok/mini-mesos-framework.git
 $ cd java
 $ mvn clean package
 ```
-
-You now have three options... use [**Mesos's local setup**](https://github.com/lmok/mini-mesos-framework/tree/master/java#using-a-manual-local-mesos-setup), [**dry-dock**](https://github.com/lmok/mini-mesos-framework/tree/master/java#using-dry-dock) (NOT FUNCTIONAL YET), or [**playa-mesos**](https://github.com/lmok/mini-mesos-framework/tree/master/java#using-playa-mesos).
-
-### Using a manual local mesos setup
-
-#### (Local Mesos) Step 1
-
-Fill out the template scripts in src/main/scripts with appropriate values, or export:
+(Optional) build the dockerised executor here:
 ```
-$FMWK_JAR_DIR=<path_to_Maven_packaged_jar> # i.e. <abs_path_to>/target/MiniFramework-0.0.1-SNAPSHOT-jar-with-dependencies.jar
-$MESOS_LIB_PATH=<path_to_native_mesos_library> # <mesos_build_path>/src/.lib since you are following Mesos' local setup guide
-$FMWK_EXECUTOR_PATH=<path_to_dir_with_executor_script> # i.e. <abs_path_to>/src/main/scripts/
-$LOG_DIR=<path_to_dir_for_logging>
+$ docker build -f images/executor/Dockerfile -t lmok/mini-executor .
 ```
-
-#### (Local Mesos) Step 2
-
-Install local [**Mesos**](http://mesos.apache.org/gettingstarted/) using their guide. I suggest going the Git route. Following the steps until just after ```make install```. Note that this could take a couple of minutes -- might want to get a coffee.
-
-To run the master/slave vanilla, follow the remaining steps at the bottom:
-
-```
-$ ./bin/mesos-master.sh --ip=127.0.0.1 --work_dir=/var/lib/mesos
-$ ./bin/mesos-slave.sh --master=127.0.0.1:5050
-```
-
-To run the master/slave with authentication, setup credentials according to the bottom of the page [**here**](http://mesos.apache.org/documentation/latest/authentication/) instead. 
-
-#### (Local Mesos) Step 3
-On your local machine, run:
-```
-$ ./framework <mesos_master_ip>:5050 # should be localhost if following Steps 1-2
-```
-Or, if authentication is configured from step 2:
-```
-$ AUTHENTICATE=true PRINCIPAL=<principal2_from_Step_2> SECRET=<secret2_from_Step_2> ./framework <mesos_master_ip>:5050
-```
-
-### Using dry-dock
-
-#### (WIP dry-dock) Step 1
-
-??? Don't do this yet, not working.
-
-#### (WIP dry-dock) Step 2
-
-Alternatively, you can use [**dry-dock**](https://github.com/UncleBarney/dry-dock) to spin up a Dockerised Mesos/Marathon cluser locally; be sure to have installed [**Docker**](https://www.docker.com/) before this. 
-
-Find the IP for your Docker (see docs for dry-dock). Export this (e.g. I use docker-machine):
-```
-$ export MESOS_LOCALSETUP_HOST_IP=`docker-machine ip`
-```
-
-### Using playa-mesos
+(If you'd rather name the executor container something else go ahead, but you have to change the image name in the MiniScheduler constructor).
 
 #### (playa-mesos) Step 1
 Follow instructions at [**playa-mesos**](https://github.com/mesosphere/playa-mesos) up to step 4. 
@@ -89,19 +41,16 @@ $ cd /vagrant
 $ sh mini-mesos-framework/java/src/main/scripts/vagrant_framework 127.0.1.1:5050
 ```
 
-
 ### Troubleshooting:
 
-+ Mesos Master/Slave not running: I defer to the Mesos documentation for this one. Make sure your firewall allows the machines to interact with each other.
-+ Framework hangs on authentication: Same as above; make sure that your firewall allows connections to/from your Mesos master/slave.
-+ Cannot find native Mesos library: Did you specify the right mesos build directory?
++ Anything vagrant/vmbox related: Don't look at me, blame [**play-mesos**](https://github.com/mesosphere/playa-mesos) instead!
++ Framework authentication errors: Make sure you didn't ask for the framework to be authenticated with an AUTHENTICATE=true flag.
++ lillio.mok@gmail.com for other inquiries. 
++ Everything ships with the generic apache license, by the way.
 
 
 ### TODO:
-1. Configure with dry-dock to run locally
-2. Enable Docker containeriser
-3a. Build gateway docker container for task deployment
-3b. Rework logic for executors + tasks to parallelise properly
-4. Parse scripts with configurations / make installable package for Mesos Fetcher
-5. Install Java ILP to optimise resource allocation
-6. Pass customisable # of tasks and application specs
+1. Build gateway/portal for deployment
+2. Install Java ILP to optimise resource allocation
+3. Pass customisable # of tasks and application specs
+4. Try to plug ochopod into the executor (may need to Marathon-ify this fmwk)
