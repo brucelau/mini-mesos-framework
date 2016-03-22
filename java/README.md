@@ -14,7 +14,9 @@ $ cd java
 $ mvn clean package
 ```
 
-You now have two options... use [**Mesos's local setup**](http://mesos.apache.org/gettingstarted/) or use [**dry-dock**](https://github.com/UncleBarney/dry-dock).
+You now have three options... use [**Mesos's local setup**](https://github.com/lmok/mini-mesos-framework/tree/master/java#using-a-manual-local-mesos-setup), [**dry-dock**](https://github.com/lmok/mini-mesos-framework/tree/master/java#using-dry-dock) (NOT FUNCTIONAL YET), or [**playa-mesos**](https://github.com/lmok/mini-mesos-framework/tree/master/java#using-playa-mesos).
+
+### Using a manual local mesos setup
 
 #### (Local Mesos) Step 1
 
@@ -49,6 +51,8 @@ Or, if authentication is configured from step 2:
 $ AUTHENTICATE=true PRINCIPAL=<principal2_from_Step_2> SECRET=<secret2_from_Step_2> ./framework <mesos_master_ip>:5050
 ```
 
+### Using dry-dock
+
 #### (WIP dry-dock) Step 1
 
 ??? Don't do this yet, not working.
@@ -62,10 +66,28 @@ Find the IP for your Docker (see docs for dry-dock). Export this (e.g. I use doc
 $ export MESOS_LOCALSETUP_HOST_IP=`docker-machine ip`
 ```
 
-#### (WIP dry-dock) Step 3
+### Using playa-mesos
 
+#### (playa-mesos) Step 1
+Follow instructions at [**playa-mesos**](https://github.com/mesosphere/playa-mesos) up to step 4. 
 
+Ensure you are in the directory with the Vagrantfile (i.e. playa-mesos/). Copy the clone of this repo into playa-mesos/:
+```
+$ cp -r [Path to framework]/mini-mesos-framework mini-mesos-framework
+```
 
+#### (playa-mesos) Step 2
+Ssh into the mesos master (from playa-mesos/:
+```
+vagrant ssh
+```
+
+#### (playa-mesos) Step 3
+Run the framework:
+```
+$ cd /vagrant
+$ sh mini-mesos-framework/java/src/main/scripts/vagrant_framework 127.0.1.1:5050
+```
 
 
 ### Troubleshooting:
