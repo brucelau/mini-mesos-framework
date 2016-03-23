@@ -21,7 +21,7 @@ $ docker build -f images/executor/Dockerfile -t lmok/mini-executor .
 Feel free to rename the executor container to something less mundane, but you have to push it to Dockerhub and change the image name & tag in the MiniScheduler constructor.
 
 #### (playa-mesos) Step 1
-Follow instructions at [**playa-mesos**](https://github.com/mesosphere/playa-mesos) up to step 4. 
+Follow instructions at [**playa-mesos**](https://github.com/mesosphere/playa-mesos) up to step 5 (`$ vagrant up`). 
 
 Ensure you are in the directory with the Vagrantfile (i.e. playa-mesos/). Copy the clone of this repo into playa-mesos/:
 ```
