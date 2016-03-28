@@ -3,6 +3,7 @@ package com.adsk.miniframework;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ArrayList;
 
 import org.apache.mesos.*;
 import org.apache.mesos.Protos.*;
@@ -48,7 +49,6 @@ public class MiniScheduler implements Scheduler
 	    	Application app1 = new Application("app1");
 	    	ExecutorSpec exe1 = new ExecutorSpec("exec1",
 	    										"lmok/mini-executor",
-	    										"",
 	    										"/opt/docker_executor",
 	    										false,
 	    										1.0,
@@ -66,7 +66,7 @@ public class MiniScheduler implements Scheduler
     }
     
     //
-    // - External construction of apps
+    // - External construction of app
     //
     public MiniScheduler(boolean implicitAcknowledgements, HashMap<String, Application> teams)
     {
@@ -308,5 +308,26 @@ public class MiniScheduler implements Scheduler
         	System.out.println("All tasks complete. Driver terminating.");
             driver.stop();
         }
+    }
+    
+    //
+    // - Methods for the REST api
+    //
+    public List<String> getRegisteredAppNames()
+    {
+    	List<String> names = new ArrayList<String>();
+    	names.addAll(this.registeredApps.keySet());
+    	return names;
+    }
+    
+    public JSONObject getRegisteredApp(String appName)
+    {
+    	return this.registeredApps.get(appName).getJson();
+    }
+    
+    public void registerApp(Application app)
+    {
+    	this.registeredApps.put(app.name, app);
+    	//return this.registeredApps.containsKey(app.name);
     }
 }

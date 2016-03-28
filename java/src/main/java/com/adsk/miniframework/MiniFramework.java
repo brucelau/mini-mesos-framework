@@ -1,9 +1,15 @@
 package com.adsk.miniframework;
 
+//import com.adsk.miniframework.server.WebApp;
+//import org.springframework.boot.builder.SpringApplicationBuilder;
+
 import java.util.UUID;
+import java.util.HashMap;
 
 import org.apache.mesos.*;
 import org.apache.mesos.Protos.*;
+
+import com.adsk.miniframework.webapp.WebServer;
 
 public class MiniFramework
 {   
@@ -89,7 +95,23 @@ public class MiniFramework
                 implicitAcknowledgements,
                 credentialBuilder.build());
         }
-
+        
+        //
+        // - New: run parallel http for rest api
+        //
+        System.out.println("Building API...");
+        
+//        HashMap<String, Object> properties = new HashMap<>();
+//        properties.put("server.port", String.valueOf(8079));
+//        new SpringApplicationBuilder(WebApp.class)
+//	        .properties(properties)
+//	        .initializers(applicationContext -> applicationContext.getBeanFactory().registerSingleton("scheduler", scheduler))
+//	        .run(args);
+        WebServer server = new WebServer(8079);
+        server.start((MiniScheduler) scheduler);
+        
+        System.out.println("Netty server launched.");
+        
         // 
         // - Run the thing
         // 

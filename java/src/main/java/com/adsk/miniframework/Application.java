@@ -43,16 +43,18 @@ public class Application
 	}
 
 	//
-	// - Adds an executor
+	// - Adds an executor; don't overwrite existing executors
 	//
 	public void putExecutor(ExecutorInfo executorInfo, String image, double reqCpu, double reqMem, int instances, JSONObject verbatim)
 	{
-		ExecutorSpec executor = new ExecutorSpec(executorInfo, image, reqCpu, reqMem, instances, verbatim);
+		if(this.executors.containsKey(executorInfo.getName())) return;
+		ExecutorSpec executor = new ExecutorSpec(executorInfo, reqCpu, reqMem, instances, verbatim);
 		this.executors.put(executorInfo.getName(), executor);
 	}
 	
 	public void putExecutorSpec(ExecutorSpec executorSpec)
 	{
+		if(this.executors.containsKey(executorSpec.executor.getName())) return;
 		this.executors.put(executorSpec.executor.getName(), executorSpec);
 	}
 	
@@ -184,7 +186,7 @@ public class Application
 	//
 	// - Retrieves the entire jsonstring
 	//
-	public String getJsonString()
+	public JSONObject getJson()
 	{
 		//
 		// - Just return the json string
@@ -196,6 +198,6 @@ public class Application
 		json.put("allocated_cpus", this.allocCpu);
 		json.put("allocated_mem", this.allocMem);
 		json.put("app_terminated", this.appTerminated);
-		return json.toJSONString();
+		return json;
 	}
 }

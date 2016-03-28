@@ -6,30 +6,26 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<dependencies>
 
+		<!-- Mesos library -->
 		<dependency>
 			<groupId>org.apache.mesos</groupId>
 			<artifactId>mesos</artifactId>
 			<version>0.28.0-rc1</version>
 		</dependency>
 
-<!-- 		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-api</artifactId>
-			<version>1.7.7</version>
-		</dependency>
+		<!-- Will need this for better logging later -->
+		<!-- <dependency> <groupId>org.slf4j</groupId> <artifactId>slf4j-api</artifactId> 
+			<version>1.7.7</version> </dependency> <dependency> <groupId>org.apache.logging.log4j</groupId> 
+			<artifactId>log4j-api</artifactId> <version>2.0.2</version> </dependency> -->
 
-		<dependency>
-			<groupId>org.apache.logging.log4j</groupId>
-			<artifactId>log4j-api</artifactId>
-			<version>2.0.2</version>
-		</dependency> -->
-		
+		<!-- For handling JSON payloads -->
 		<dependency>
 			<groupId>com.googlecode.json-simple</groupId>
 			<artifactId>json-simple</artifactId>
 			<version>1.1.1</version>
 		</dependency>
 
+		<!-- Akka inside executors, and later for communicating with REST api server -->
 		<dependency>
 			<groupId>com.typesafe.akka</groupId>
 			<artifactId>akka-actor_2.11</artifactId>
@@ -37,6 +33,7 @@
 			<version>2.3.14</version>
 		</dependency>
 
+		<!-- Testing dependencies -->
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
@@ -51,6 +48,101 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- Jetty/Jersey/JAX for restful api -->
+		<!-- 
+		<dependency>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-server</artifactId>
+			<version>9.3.8.RC0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-servlet</artifactId>
+			<version>9.3.8.RC0</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.glassfish.jersey.core</groupId>
+			<artifactId>jersey-server</artifactId>
+			<version>2.7</version>
+		</dependency>
+		<dependency>
+			<groupId>org.glassfish.jersey.containers</groupId>
+			<artifactId>jersey-container-servlet-core</artifactId>
+			<version>2.7</version>
+		</dependency>
+		<dependency>
+			<groupId>org.glassfish.jersey.containers</groupId>
+			<artifactId>jersey-container-jetty-http</artifactId>
+			<version>2.7</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.sun.xml.ws</groupId>
+			<artifactId>jaxws-rt</artifactId>
+			<version>2.1</version>
+		</dependency> -->
+		
+		<!-- Use spring instead for rest api -->
+  <!--    	<dependency>
+	       <groupId>commons-io</groupId>
+	       <artifactId>commons-io</artifactId>
+	       <version>2.4</version>
+	   </dependency>
+	   
+	   <dependency>
+	       <groupId>org.apache.httpcomponents</groupId>
+	       <artifactId>httpclient</artifactId>
+	       <version>4.5.2</version>
+	   </dependency>
+	   
+		<dependency>
+	        <groupId>org.springframework</groupId>
+    	    <artifactId>spring-context</artifactId>
+        	<version>4.2.5.RELEASE</version>
+    	</dependency>
+    	
+   	    <dependency>
+	        <groupId>org.springframework.boot</groupId>
+	        <artifactId>spring-boot-starter-web</artifactId>
+			<version>1.3.3.RELEASE</version>
+	    </dependency> -->
+	
+  	  <!-- Or use RESTEasy and Netty -->
+ 	    
+	    <dependency>
+		    <groupId>io.netty</groupId>
+		    <artifactId>netty-all</artifactId>
+		    <version>4.1.0.CR4</version>
+		    <scope>compile</scope>
+	    </dependency>
+
+ 		<dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-jaxrs</artifactId>
+            <version>2.3.2.Final</version>
+        </dependency>
+        
+          <dependency>
+		      <groupId>org.jboss.resteasy</groupId>
+		      <artifactId>resteasy-netty</artifactId>
+		      <version>2.3.5.Final</version>
+		  </dependency>
+		  
+		  <dependency>
+		    <groupId>org.jboss.resteasy</groupId>
+		    <artifactId>resteasy-servlet-initializer</artifactId>
+		    <version>3.0.13.Final</version>
+		    <scope>provided</scope>
+		</dependency>
+		
+		<dependency>
+		   <groupId>org.jboss.resteasy</groupId>
+		   <artifactId>resteasy-jackson2-provider</artifactId>
+		   <version>3.0.16.Final</version>
+		</dependency>
+	    
 	</dependencies>
 
 	<build>
@@ -59,10 +151,10 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.1</version>
+				<version>3.3</version>
 				<configuration>
-					<source>1.7</source>
-					<target>1.7</target>
+					<source>1.8</source>
+					<target>1.8</target>
 				</configuration>
 			</plugin>
 
@@ -100,6 +192,16 @@
 					</execution>
 				</executions>
 			</plugin>
+						
+	        <plugin>
+	            <groupId>org.apache.maven.plugins</groupId>
+	            <artifactId>maven-war-plugin</artifactId>
+	            <version>2.3</version>
+	            <configuration>
+	                <failOnMissingWebXml>true</failOnMissingWebXml>
+	                <warName>mini-framework-web</warName>
+	            </configuration>
+	        </plugin>
 
 		</plugins>
 	</build>

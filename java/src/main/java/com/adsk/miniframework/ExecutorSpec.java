@@ -38,11 +38,6 @@ public class ExecutorSpec
 	// - Verbatim json payload sent to each task
 	//
 	private JSONObject verbatim;
-	
-	//
-	// - Docker image
-	//
-	private final String taskImage;
 
 	//
 	// - May not have a json payload
@@ -74,13 +69,13 @@ public class ExecutorSpec
 	// - Constructor for Docker
 	// - Also follows exactly the pre-baked Dockerfile. 
 	//
-	public ExecutorSpec(String executorName, String executorImage, String taskImage, String command, 
+	public ExecutorSpec(String executorName, String executorImage, String command, 
 						boolean forcePull, double reqCpu, double reqMem, int instances, JSONObject verbatim) throws Exception
 	{
 		//
 		// - Calls below constructor, then builds the executorinfo with the right containeriser
 		//
-		this(null, taskImage, reqCpu, reqMem, instances, verbatim);
+		this(null, reqCpu, reqMem, instances, verbatim);
 		
 		//
 		// - Build docker & container info
@@ -127,12 +122,10 @@ public class ExecutorSpec
 	// - Also accept pre-constructed executors
 	// - IMPORTANT: note that taskImage is _not_ the executor image.
 	//
-	public ExecutorSpec(ExecutorInfo executorInfo, String taskImage, double reqCpu, double reqMem, int instances, JSONObject verbatim)
+	public ExecutorSpec(ExecutorInfo executorInfo, double reqCpu, double reqMem, int instances, JSONObject verbatim)
 	{
 		this.tasksLaunched = new ArrayList<TaskID>();
 		this.tasksRunning = new ArrayList<TaskID>();
-		
-		this.taskImage = taskImage;
 		
 		this.reqCpu = reqCpu;
 		this.reqMem = reqMem;
@@ -244,8 +237,4 @@ public class ExecutorSpec
 		return this.instances;
 	}
 	
-	public String getTaskImage()
-	{
-		return this.taskImage;
-	}
 }
