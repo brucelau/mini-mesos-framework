@@ -1,4 +1,5 @@
 import com.adsk.miniframework.Application;
+import com.adsk.miniframework.MiniScheduler;
 
 import java.util.Arrays;
 
@@ -14,21 +15,20 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import org.apache.mesos.Protos.*;
 import org.apache.mesos.SchedulerDriver;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ApplicationTest
 {	
-	private final JSONParser parser = new JSONParser();
-	
+	ObjectMapper mapper = MiniScheduler.getObjectMapper();
 	private double doubleDelta;
 	
 	private String name;
 	private double cpu;
 	private double mem;
-	private JSONObject json;
+	private JsonNode json;
 	private String cmd;
 	private String image;
 	
@@ -54,7 +54,7 @@ public class ApplicationTest
 		this.cpu = 1.0;
 		this.mem = 16;
 		this.spec = new Application(this.name);
-		this.json = new JSONObject();
+		this.json = mapper.createObjectNode();
 
 		//
 		// - This is here because ExecutorInfo cannot be mocked... wish it could

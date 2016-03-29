@@ -1,22 +1,28 @@
 package com.adsk.miniframework;
 
+import com.adsk.miniframework.webapp.Serializers.ExecutorSpecSerializer;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.mesos.*;
 import org.apache.mesos.Protos.*;
-import org.json.simple.JSONObject;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.JsonNode;
+
 
 //
 // - Wrapper for ExecutorInfo; mesos documentation requests for Executors to be wrapped
 // and not extended
+// - TODO use Custom Serializer (in webapp.Serializers); there's a bug in it that I haven't solved
 //
+//@JsonSerialize(using = ExecutorSpecSerializer.class)
 public class ExecutorSpec
 {
-    //
-    // - A tiny message for graceful termination... at some point
-    //
-
 	public ExecutorInfo executor;
 	
 	//
@@ -31,46 +37,21 @@ public class ExecutorSpec
 	// - Tasks launched by executor; decreased when the task is running
 	// - Tasks running; increased when launch is complete, decreased when task is stopped
 	//
-	private List<TaskID> tasksLaunched;
-	private List<TaskID> tasksRunning;
+	
+	protected List<TaskID> tasksLaunched;
+	protected List<TaskID> tasksRunning;
 	
 	//
 	// - Verbatim json payload sent to each task
 	//
-	private JSONObject verbatim;
+	private JsonNode verbatim;
 
-	//
-	// - May not have a json payload
-	//
-//	public ExecutorSpec(String name, String command, String path, String image, double reqCpu, double reqMem, int instances) throws Exception
-//	{
-//		this(name, command, path, image, reqCpu, reqMem, instances, new JSONObject());
-//	}
-//	
-	//
-	// - Constructor looks for the command to build an ExecutorInfo
-	//
-//	public ExecutorSpec(String executorName, String command, String path, String image, double reqCpu, double reqMem, int instances, JSONObject verbatim) throws Exception
-//	{
-//		this(null, reqCpu, reqMem, instances, verbatim);
-//		
-//	    CommandInfo.URI uri = CommandInfo.URI.newBuilder().setValue(path).build();
-//	    CommandInfo cmdInfo = CommandInfo.newBuilder().setValue(command).addUris(uri).build();
-//	    
-//	    this.executor = ExecutorInfo.newBuilder()
-//	                            .setExecutorId(ExecutorID.newBuilder().setValue(executorName))
-//	                            .setCommand(cmdInfo)
-//	                            .setName(executorName)
-//	                            .setSource("java")
-//	                            .build();
-//	}
-	
 	//
 	// - Constructor for Docker
 	// - Also follows exactly the pre-baked Dockerfile. 
 	//
 	public ExecutorSpec(String executorName, String executorImage, String command, 
-						boolean forcePull, double reqCpu, double reqMem, int instances, JSONObject verbatim) throws Exception
+						boolean forcePull, double reqCpu, double reqMem, int instances, JsonNode verbatim) throws Exception
 	{
 		//
 		// - Calls below constructor, then builds the executorinfo with the right containeriser
@@ -94,7 +75,6 @@ public class ExecutorSpec
 		//
 		// - Set command to run
 		//
-//	    CommandInfo.URI uri = CommandInfo.URI.newBuilder().setValue(new File("/opt/docker_executor").getCanonicalPath()).setExecutable(true).build();
 	    CommandInfo cmdInfo = CommandInfo.newBuilder().setValue(command).build();
 		
 		//
@@ -122,7 +102,7 @@ public class ExecutorSpec
 	// - Also accept pre-constructed executors
 	// - IMPORTANT: note that taskImage is _not_ the executor image.
 	//
-	public ExecutorSpec(ExecutorInfo executorInfo, double reqCpu, double reqMem, int instances, JSONObject verbatim)
+	public ExecutorSpec(ExecutorInfo executorInfo, double reqCpu, double reqMem, int instances, JsonNode verbatim)
 	{
 		this.tasksLaunched = new ArrayList<TaskID>();
 		this.tasksRunning = new ArrayList<TaskID>();

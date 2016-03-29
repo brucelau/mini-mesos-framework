@@ -8,21 +8,21 @@ import org.apache.mesos.Protos.*;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.ActorSystem;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.*;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class DockerExecutor implements Executor
 {
 	//
 	// - If app has an executor, want tasks to be launched with accompanying actor
 	//
-	private JSONParser parser;
+	private static final ObjectMapper mapper = new ObjectMapper();
 	private HashMap<String, ActorRef> actors;
 	private final ActorSystem system = ActorSystem.create("ExecutorSystem");
 	
 	public DockerExecutor()
 	{
-		this.parser = new JSONParser();
 		this.actors = new HashMap<String, ActorRef>();
 	}
 	
@@ -60,17 +60,14 @@ public class DockerExecutor implements Executor
 	@Override
 	public void frameworkMessage(ExecutorDriver driver, byte[] data)
 	{
-		String message = new String(data);
-		JSONObject msgJson = new JSONObject();
-
 		try
 		{
-			msgJson = (JSONObject) this.parser.parse((String) message);
-//			this.actors.get(msgJson.get("task")).tell(msgJson, ActorRef.noSender());
+			String message = new String(data);
+			JsonNode msgJson = DockerExecutor.getObjectMapper().readValue(message, JsonNode.class);
 		}
 		catch (Exception e)
 		{
-			// Only interested in JSON serialisable messages for now
+			// ignore for now
 		}
 	}
 
@@ -85,6 +82,14 @@ public class DockerExecutor implements Executor
 		System.out.println("Executor error: " + message);
 		driver.sendFrameworkMessage(("Executor Error: " + message).getBytes());
 	}
+	
+	//
+	// - Get our global jackson object mapper
+	//
+    public static ObjectMapper getObjectMapper()
+    {
+    	return mapper;
+    }
 	
 	public static void main(String[] args) throws Exception
 	{	

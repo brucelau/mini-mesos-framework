@@ -6,11 +6,15 @@ import java.util.HashMap;
 
 import org.apache.mesos.Protos.*;
 import org.apache.mesos.SchedulerDriver;
-import org.json.simple.JSONObject;
 
+import com.adsk.miniframework.webapp.Serializers.ApplicationSerializer;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
+//@JsonSerialize(using = ApplicationSerializer.class)
 public class Application
 {
-
 	//
 	// - Identifier for the app
 	//
@@ -45,7 +49,7 @@ public class Application
 	//
 	// - Adds an executor; don't overwrite existing executors
 	//
-	public void putExecutor(ExecutorInfo executorInfo, String image, double reqCpu, double reqMem, int instances, JSONObject verbatim)
+	public void putExecutor(ExecutorInfo executorInfo, String image, double reqCpu, double reqMem, int instances, JsonNode verbatim)
 	{
 		if(this.executors.containsKey(executorInfo.getName())) return;
 		ExecutorSpec executor = new ExecutorSpec(executorInfo, reqCpu, reqMem, instances, verbatim);
@@ -186,18 +190,13 @@ public class Application
 	//
 	// - Retrieves the entire jsonstring
 	//
-	public JSONObject getJson()
+	public String getJson() throws Exception
 	{
 		//
 		// - Just return the json string
 		//
 		//
-		JSONObject json = new JSONObject();
-		json.put("name", this.name);
-		json.put("allocated_instances", this.allocInstances);
-		json.put("allocated_cpus", this.allocCpu);
-		json.put("allocated_mem", this.allocMem);
-		json.put("app_terminated", this.appTerminated);
-		return json;
+		ObjectMapper mapper = MiniScheduler.getObjectMapper();
+		return mapper.writeValueAsString(this);
 	}
 }

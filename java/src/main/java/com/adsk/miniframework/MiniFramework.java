@@ -97,23 +97,15 @@ public class MiniFramework
         }
         
         //
-        // - New: run parallel http for rest api
+        // - Run parallel netty with resteasy for small api
         //
-        System.out.println("Building API...");
-        
-//        HashMap<String, Object> properties = new HashMap<>();
-//        properties.put("server.port", String.valueOf(8079));
-//        new SpringApplicationBuilder(WebApp.class)
-//	        .properties(properties)
-//	        .initializers(applicationContext -> applicationContext.getBeanFactory().registerSingleton("scheduler", scheduler))
-//	        .run(args);
+        System.out.println("===> Building API...");
         WebServer server = new WebServer(8079);
         server.start((MiniScheduler) scheduler);
-        
-        System.out.println("Netty server launched.");
+        System.out.println("===> Netty server launched.");
         
         // 
-        // - Run the thing
+        // - Run the thing, duh
         // 
         System.out.println("Running scheduler driver...");
         int status = driver.run() == Status.DRIVER_STOPPED ? 0 : 1;

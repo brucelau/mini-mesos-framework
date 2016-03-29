@@ -3,9 +3,10 @@ package com.adsk.miniframework;
 import org.apache.mesos.*;
 import org.apache.mesos.Protos.*;
 
-import org.json.simple.JSONObject;
-import org.json.simple.parser.*;
 import akka.actor.*;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class MiniAkka
 {
@@ -38,7 +39,6 @@ public class MiniAkka
     //
 	public static class Sleepy extends UntypedActor
 	{
-		private JSONParser parser;
 		private ExecutorDriver driver;
 		private TaskInfo task;
 		private TaskStatus status;
@@ -47,7 +47,6 @@ public class MiniAkka
 		{
 			this.driver = driver;
 			this.task = task;
-			this.parser = new JSONParser();		
 		}
 
 		@Override
@@ -74,51 +73,57 @@ public class MiniAkka
 		}
 		
 		@Override
-		public void onReceive(Object message) throws Exception
+		public void onReceive(Object message)
 		{
-		
-			if (message instanceof JSONObject)
+			try
 			{
-				JSONObject msgJson = (JSONObject) message;
+				if (message instanceof String)
+				{
+					JsonNode msgJson = DockerExecutor.getObjectMapper().readValue((String) message, JsonNode.class);
+									
+					//
+					// - Task told to stop
+					//
+					if (msgJson.has("stop"))
+					{
+						//
+						// - queue poisonpill; this will trigger the task_finished status update
+						//
+						System.out.println("JSON stop payload received");
+						this.getSelf().tell(PoisonPill.getInstance(), this.getSelf());
+					}
+	
+					//
+					// - Catch other messages
+					//
+					else
+					{
+						unhandled(message);
+					}
+				}
 				
-				//
-				// - Task told to stop
-				//
-				if (msgJson.containsKey("stop"))
+				else if (message instanceof Initiate)
 				{
 					//
-					// - queue poisonpill; this will trigger the task_finished status update
+					// - Put your task here
 					//
-					System.out.println("JSON stop payload received");
+					System.out.println("Task running");
+					Thread.sleep(10000);
+					driver.sendFrameworkMessage(("Task running: " +  this.task.getTaskId().getValue()).getBytes());
+				}
+				
+				else if (message instanceof Terminate)
+				{
+					
+					//
+					// - TODO gracefully shutdown
+					//
 					this.getSelf().tell(PoisonPill.getInstance(), this.getSelf());
 				}
-
-				//
-				// - Catch other messages
-				//
-				else
-				{
-					unhandled(message);
-				}
 			}
-			
-			else if (message instanceof Initiate)
+			catch (Exception e)
 			{
-				//
-				// - Put your task here
-				//
-				System.out.println("Task running");
-				Thread.sleep(10000);
-				driver.sendFrameworkMessage(("Task running: " +  this.task.getTaskId().getValue()).getBytes());
-			}
-			
-			else if (message instanceof Terminate)
-			{
-				
-				//
-				// - TODO gracefully shutdown
-				//
-				this.getSelf().tell(PoisonPill.getInstance(), this.getSelf());
+				// ignore it for now
 			}
 		}
 	}

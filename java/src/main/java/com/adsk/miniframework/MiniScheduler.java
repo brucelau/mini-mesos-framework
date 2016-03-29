@@ -1,5 +1,7 @@
 package com.adsk.miniframework;
 
+import com.adsk.miniframework.webapp.Serializers.*;
+
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
@@ -8,16 +10,31 @@ import java.util.ArrayList;
 import org.apache.mesos.*;
 import org.apache.mesos.Protos.*;
 
-import org.json.simple.JSONObject;
-import org.json.simple.parser.ParseException;
-import org.json.simple.parser.JSONParser;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 
 public class MiniScheduler implements Scheduler
 {
 	//
 	// - Json parser
 	//
-	private JSONParser parser;
+	private static final ObjectMapper mapper = makeMapper();
+	
+	private static ObjectMapper makeMapper()
+	{
+		ObjectMapper mapper = new ObjectMapper();
+        
+        //
+        // - Just register the serializers here.
+        //
+    	SimpleModule module = new SimpleModule();
+    	module.addSerializer(Application.class, new ApplicationSerializer());
+    	module.addSerializer(ExecutorSpec.class, new ExecutorSpecSerializer());
+    	
+    	mapper.registerModule(module);
+    	return mapper;
+	}
 	
     // 
 	// - Members for applications
@@ -33,9 +50,9 @@ public class MiniScheduler implements Scheduler
     //
     private HashMap<String, String> tasksToApps;
     
-    // 
-    // - book keeping constants used by e.g. framework
-    // 
+    //
+    // - See mesos documentation on this one
+    //
     private boolean implicitAcknowledgements;
    
     //
@@ -54,7 +71,7 @@ public class MiniScheduler implements Scheduler
 	    										1.0,
 	    										32.0,
 	    										1,
-	    										new JSONObject());
+	    										mapper.createObjectNode());
 	    	app1.putExecutorSpec(exe1);
 	    	this.registeredApps.put(app1.name, app1);
 	    	
@@ -83,7 +100,6 @@ public class MiniScheduler implements Scheduler
     {
         
         this.implicitAcknowledgements = implicitAcknowledgements;
-        this.parser = new JSONParser();
         
         // 
         // - Resource limits per registeredApps app (may be one task)
@@ -93,7 +109,6 @@ public class MiniScheduler implements Scheduler
         this.memLimit = memLimit;
         this.registeredApps = new HashMap<String, Application>(teams);
         this.tasksToApps = new HashMap<String, String>();
-        
     }
     
     public Application getSpecs(String name)
@@ -152,15 +167,15 @@ public class MiniScheduler implements Scheduler
         // 
     	String appName = this.tasksToApps.get(status.getTaskId().getValue());
         String executorName = status.getExecutorId().getValue();
+        
         //
         // - Get the message from the status update
         //
-        JSONObject msgJson = new JSONObject();
         try
         {
-        	msgJson = (JSONObject) this.parser.parse(status.getMessage());
+			JsonNode msgJson = DockerExecutor.getObjectMapper().readValue(status.getMessage(), JsonNode.class);
         }
-        catch (ParseException e)
+        catch (Exception e)
         {
         	// Don't bother handling it right now
         }
@@ -320,14 +335,26 @@ public class MiniScheduler implements Scheduler
     	return names;
     }
     
-    public JSONObject getRegisteredApp(String appName)
+    //
+    // Returns jsonnode of an app, rendered by our custom mapper
+    //
+    public JsonNode getRegisteredApp(String appName)
     {
-    	return this.registeredApps.get(appName).getJson();
+    	return mapper.valueToTree(this.registeredApps.get(appName));
     }
+    
     
     public void registerApp(Application app)
     {
     	this.registeredApps.put(app.name, app);
     	//return this.registeredApps.containsKey(app.name);
+    }
+    
+    //
+    // - Get our global jackson object mapper
+    //
+    public static ObjectMapper getObjectMapper()
+    {
+    	return mapper;
     }
 }

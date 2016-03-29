@@ -13,18 +13,6 @@
 			<version>0.28.0-rc1</version>
 		</dependency>
 
-		<!-- Will need this for better logging later -->
-		<!-- <dependency> <groupId>org.slf4j</groupId> <artifactId>slf4j-api</artifactId> 
-			<version>1.7.7</version> </dependency> <dependency> <groupId>org.apache.logging.log4j</groupId> 
-			<artifactId>log4j-api</artifactId> <version>2.0.2</version> </dependency> -->
-
-		<!-- For handling JSON payloads -->
-		<dependency>
-			<groupId>com.googlecode.json-simple</groupId>
-			<artifactId>json-simple</artifactId>
-			<version>1.1.1</version>
-		</dependency>
-
 		<!-- Akka inside executors, and later for communicating with REST api server -->
 		<dependency>
 			<groupId>com.typesafe.akka</groupId>
@@ -47,69 +35,8 @@
 			<version>1.9.5</version>
 			<scope>test</scope>
 		</dependency>
-
-		<!-- Jetty/Jersey/JAX for restful api -->
-		<!-- 
-		<dependency>
-			<groupId>org.eclipse.jetty</groupId>
-			<artifactId>jetty-server</artifactId>
-			<version>9.3.8.RC0</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.eclipse.jetty</groupId>
-			<artifactId>jetty-servlet</artifactId>
-			<version>9.3.8.RC0</version>
-		</dependency>
-		
-		<dependency>
-			<groupId>org.glassfish.jersey.core</groupId>
-			<artifactId>jersey-server</artifactId>
-			<version>2.7</version>
-		</dependency>
-		<dependency>
-			<groupId>org.glassfish.jersey.containers</groupId>
-			<artifactId>jersey-container-servlet-core</artifactId>
-			<version>2.7</version>
-		</dependency>
-		<dependency>
-			<groupId>org.glassfish.jersey.containers</groupId>
-			<artifactId>jersey-container-jetty-http</artifactId>
-			<version>2.7</version>
-		</dependency>
-
-		<dependency>
-			<groupId>com.sun.xml.ws</groupId>
-			<artifactId>jaxws-rt</artifactId>
-			<version>2.1</version>
-		</dependency> -->
-		
-		<!-- Use spring instead for rest api -->
-  <!--    	<dependency>
-	       <groupId>commons-io</groupId>
-	       <artifactId>commons-io</artifactId>
-	       <version>2.4</version>
-	   </dependency>
-	   
-	   <dependency>
-	       <groupId>org.apache.httpcomponents</groupId>
-	       <artifactId>httpclient</artifactId>
-	       <version>4.5.2</version>
-	   </dependency>
-	   
-		<dependency>
-	        <groupId>org.springframework</groupId>
-    	    <artifactId>spring-context</artifactId>
-        	<version>4.2.5.RELEASE</version>
-    	</dependency>
-    	
-   	    <dependency>
-	        <groupId>org.springframework.boot</groupId>
-	        <artifactId>spring-boot-starter-web</artifactId>
-			<version>1.3.3.RELEASE</version>
-	    </dependency> -->
 	
-  	  <!-- Or use RESTEasy and Netty -->
+  	  <!-- Use RESTEasy and Netty for our REST api -->
  	    
 	    <dependency>
 		    <groupId>io.netty</groupId>
@@ -192,17 +119,7 @@
 					</execution>
 				</executions>
 			</plugin>
-						
-	        <plugin>
-	            <groupId>org.apache.maven.plugins</groupId>
-	            <artifactId>maven-war-plugin</artifactId>
-	            <version>2.3</version>
-	            <configuration>
-	                <failOnMissingWebXml>true</failOnMissingWebXml>
-	                <warName>mini-framework-web</warName>
-	            </configuration>
-	        </plugin>
-
+			
 		</plugins>
 	</build>
 </project>

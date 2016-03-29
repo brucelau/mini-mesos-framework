@@ -11,6 +11,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 @Path("/apps")
 public class ApplicationsRest
 {
@@ -30,9 +32,9 @@ public class ApplicationsRest
 	
 	@GET
 	@Path("/{id}")
-	@Produces("application/json")
 	public Response getApp(@PathParam("id") String appName)
 	{
-		return Response.status(200).entity(this.scheduler.getRegisteredApp(appName)).build();
+		JsonNode json = this.scheduler.getRegisteredApp(appName);
+		return Response.status(200).entity(json).build();
 	}
 }
